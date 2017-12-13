@@ -92,9 +92,23 @@ public class Util {
             int start = offset_data.getStart(), end = offset_data.getEnd();
             AttributeSet oldSet = style.getCharacterElement(end - 1).getAttributes();
             StyleContext sc = StyleContext.getDefaultStyleContext();
-            AttributeSet red = sc.addAttribute(oldSet, StyleConstants.Foreground, Color.RED);
+            AttributeSet red = sc.addAttribute(oldSet, StyleConstants.Foreground, Color.BLUE);
             style.setCharacterAttributes(start, (end - start), red, true);
         });
+    }
+    
+    public static ArrayList<Offset> removeSingleChar(ArrayList<Offset> coordinates){
+        ArrayList<Offset> removeOffset = new ArrayList();
+        for(Offset offset_data:coordinates)
+        {
+            if((offset_data.getEnd()-offset_data.getStart())<2)
+                removeOffset.add(offset_data);
+        }
+        removeOffset.forEach((toRemove) -> {
+            coordinates.remove(toRemove);
+        });
+        
+        return coordinates;
     }
 
 }

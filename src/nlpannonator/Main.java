@@ -29,6 +29,7 @@ public class Main extends javax.swing.JFrame {
         load = new javax.swing.JButton();
         submit = new javax.swing.JButton();
         fileName = new javax.swing.JLabel();
+        status = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -49,17 +50,21 @@ public class Main extends javax.swing.JFrame {
             }
         });
 
+        status.setText("Status:");
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addComponent(jScrollPane1)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(fileName, javax.swing.GroupLayout.DEFAULT_SIZE, 395, Short.MAX_VALUE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(load)
+                .addGap(2, 2, 2)
+                .addComponent(fileName, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
+                .addComponent(load)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 191, Short.MAX_VALUE)
+                .addComponent(status, javax.swing.GroupLayout.PREFERRED_SIZE, 160, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(submit)
                 .addGap(29, 29, 29))
         );
@@ -67,11 +72,12 @@ public class Main extends javax.swing.JFrame {
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                         .addComponent(load)
-                        .addComponent(submit))
-                    .addComponent(fileName, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addComponent(submit)
+                        .addComponent(fileName, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(status, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 434, Short.MAX_VALUE))
         );
@@ -81,6 +87,7 @@ public class Main extends javax.swing.JFrame {
 
 
     private void loadActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_loadActionPerformed
+        coordinates.clear();//clear the values
         String userDir = System.getProperty("user.home");
         final JFileChooser fileDialog = new JFileChooser(userDir + "/Desktop");
         int fileStatus = fileDialog.showOpenDialog(this);
@@ -88,11 +95,16 @@ public class Main extends javax.swing.JFrame {
             inputFile = fileDialog.getSelectedFile();
             fileName.setText(inputFile.getName());
             String inputdata = Util.readData(inputFile.getPath());
-            playground.setText(inputdata);
+            if(inputdata!=null||inputdata!="")
+                playground.setText(inputdata);
+            else
+                status.setText("Status: Can't read File");
+            status.setText("Status: File loaded");
         }
     }//GEN-LAST:event_loadActionPerformed
 
     private void submitActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_submitActionPerformed
+        coordinates=Util.removeSingleChar(coordinates);
         String orgText=playground.getText();
         orgText=orgText.replaceAll("\r", ""); //remove this stupid carriage return
         
@@ -116,9 +128,11 @@ public class Main extends javax.swing.JFrame {
         
         if(Util.writeData(finalData.toString(),inputFile.getParent()+File.separator+"Mod_"+inputFile.getName())!=null){
             System.out.println("Successfuly Written");
+            status.setText("Status: Saved to File");
         }
         else{
             System.out.println("Error Occured");
+            status.setText("Status: Couldn't save File");
         }
         
     }//GEN-LAST:event_submitActionPerformed
@@ -136,9 +150,11 @@ public class Main extends javax.swing.JFrame {
                 Offset offset = new Offset(start, end);
                 if (coordinates.contains(offset)) { //in case people needs to remove annotation
                     coordinates.remove(offset);
+                    status.setText("Status: Word Removed");
                     //style.setCharacterAttributes(start, (end - start), black, false);
                 } else {
                     coordinates = Util.overlapsAdd(offset, coordinates);
+                    status.setText("Status: Word added");
                     //style.setCharacterAttributes(start, (end - start), red, true);
                 }
 
@@ -189,6 +205,7 @@ public class Main extends javax.swing.JFrame {
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JButton load;
     private javax.swing.JTextPane playground;
+    private javax.swing.JLabel status;
     private javax.swing.JButton submit;
     // End of variables declaration//GEN-END:variables
 }
