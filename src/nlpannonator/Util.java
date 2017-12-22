@@ -110,5 +110,16 @@ public class Util {
         
         return coordinates;
     }
+    
+    public static String makeEvenSpaces(String in)
+    {
+        String out="";
+        String[] data=in.split(" +");
+        
+        for(String words : data){
+            out=out+" "+words;
+        }
+        return out;
+    }
 
 }

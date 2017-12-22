@@ -116,7 +116,7 @@ public class Main extends javax.swing.JFrame {
             int start=data.getStart();
             int end=data.getEnd();
             String orgStr=orgText.substring(start, end);
-            String newStr="<START:person> "+orgStr+" <END> ";
+            String newStr=" <START:person> "+orgStr+" <END> ";
             
             finalData.append(orgText.substring(prev_index, start));
             if(newStr!=null)
@@ -125,8 +125,9 @@ public class Main extends javax.swing.JFrame {
             prev_index=end;
         }
         finalData.append(orgText.substring(prev_index,next_index));
+        String finaldata_with_even_spaces=Util.makeEvenSpaces(finalData.toString());
         
-        if(Util.writeData(finalData.toString(),inputFile.getParent()+File.separator+"Mod_"+inputFile.getName())!=null){
+        if(Util.writeData(finaldata_with_even_spaces,inputFile.getParent()+File.separator+"Mod_"+inputFile.getName())!=null){
             System.out.println("Successfuly Written");
             status.setText("Status: Saved to File");
         }
