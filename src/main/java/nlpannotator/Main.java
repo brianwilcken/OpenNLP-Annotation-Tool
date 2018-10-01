@@ -2,14 +2,13 @@ package nlpannotator;
 
 import common.Tools;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.MediaType;
-import org.springframework.http.RequestEntity;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.*;
-import javax.swing.*;
+import java.awt.event.ActionEvent;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
@@ -18,12 +17,14 @@ import javax.swing.text.Highlighter.Highlight;
 
 public class Main extends javax.swing.JFrame {
 
+
+    ArrayList<Offset> coordinates;
+    Map document;
     private RestTemplate restTemplate;
     private final String restApiUrl = Tools.getProperty("restApi.url");
-    ArrayList<Offset> coordinates;
-    File inputFile;
 
     public Main() {
+
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         restTemplate = new RestTemplate(requestFactory);
         initComponents();
@@ -35,7 +36,9 @@ public class Main extends javax.swing.JFrame {
         jScrollPane1 = new javax.swing.JScrollPane();
         playground = new javax.swing.JTextPane();
         load = new javax.swing.JButton();
-        submit = new javax.swing.JButton();
+        annotate = new javax.swing.JButton();
+        reset = new javax.swing.JButton();
+        save = new javax.swing.JButton();
         fileName = new javax.swing.JLabel();
         status = new javax.swing.JLabel();
 
@@ -51,10 +54,24 @@ public class Main extends javax.swing.JFrame {
             }
         });
 
-        submit.setText("Submit");
-        submit.addActionListener(new java.awt.event.ActionListener() {
+        annotate.setText("Auto Detect");
+        annotate.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                submitActionPerformed(evt);
+                annotateActionPerformed(evt);
+            }
+        });
+
+        reset.setText("Reset");
+        reset.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                resetActionPerformed(evt);
+            }
+        });
+
+        save.setText("Save");
+        save.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                saveActionPerformed(evt);
             }
         });
 
@@ -71,9 +88,13 @@ public class Main extends javax.swing.JFrame {
                 .addGap(18, 18, 18)
                 .addComponent(load)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 191, Short.MAX_VALUE)
+                    .addComponent(annotate)
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 191, Short.MAX_VALUE)
+                    .addComponent(reset)
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 191, Short.MAX_VALUE)
                 .addComponent(status, javax.swing.GroupLayout.PREFERRED_SIZE, 260, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(submit)
+                .addComponent(save)
                 .addGap(29, 29, 29))
         );
         layout.setVerticalGroup(
@@ -82,10 +103,12 @@ public class Main extends javax.swing.JFrame {
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                        .addComponent(load)
-                        .addComponent(submit)
-                        .addComponent(fileName, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(status, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                            .addComponent(load)
+                            .addComponent(annotate)
+                            .addComponent(reset)
+                            .addComponent(save)
+                            .addComponent(fileName, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(status, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 480, Short.MAX_VALUE))
         );
@@ -93,77 +116,124 @@ public class Main extends javax.swing.JFrame {
         pack();
     }
 
-
-    private void loadActionPerformed(java.awt.event.ActionEvent evt) {
-
-        try {
-            ParameterizedTypeReference<HashMap<String, Object>> responseType =
-                    new ParameterizedTypeReference<HashMap<String, Object>>() {};
-
-            RequestEntity<Void> request = RequestEntity.get(new URI(restApiUrl + "/documents"))
-                    .accept(MediaType.APPLICATION_JSON).build();
-
-            ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
-
-            Map<String, Object> jsonDict = response.getBody();
-
-            for (String key : jsonDict.keySet()) {
-
-            }
-
-            coordinates.clear();//clear the values
-
-            String userDir = System.getProperty("user.home");
-            final JFileChooser fileDialog = new JFileChooser(userDir + "/Desktop");
-            int fileStatus = fileDialog.showOpenDialog(this);
-            if (fileStatus == JFileChooser.APPROVE_OPTION) {
-                inputFile = fileDialog.getSelectedFile();
-                fileName.setText(inputFile.getName());
-                String inputdata = Util.readData(inputFile.getPath());
-                if(inputdata!=null||inputdata!="")
-                    playground.setText(inputdata);
-                else
-                    status.setText("Status: Can't read File");
-                status.setText("Status: File loaded");
-            }
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
+    private void resetActionPerformed(ActionEvent evt) {
+        if (document != null) {
+            playground.setText(document.get("parsed").toString());
+        } else {
+            status.setText("Please load a document...");
         }
     }
 
-    private void submitActionPerformed(java.awt.event.ActionEvent evt) {
-        coordinates=Util.removeSingleChar(coordinates);
-        String orgText=playground.getText();
-        orgText=orgText.replaceAll("\r", "");
-        
-        int prev_index=0,next_index=orgText.length();
-        Collections.sort(coordinates);
-        StringBuilder finalData=new StringBuilder();
-        
-        for (Offset data : coordinates) { 
-            int start=data.getStart();
-            int end=data.getEnd();
-            String orgStr=orgText.substring(start, end);
-            String newStr=" <START:FAC> "+orgStr+" <END> ";
-            
-            finalData.append(orgText.substring(prev_index, start));
-            if(newStr!=null)
-                finalData.append(newStr);
-            
-            prev_index=end;
+    private void annotateActionPerformed(ActionEvent evt) {
+        if (document != null) {
+            try {
+                ParameterizedTypeReference<HashMap<String, Object>> responseType =
+                        new ParameterizedTypeReference<HashMap<String, Object>>() {};
+
+                RequestEntity<Void> request = RequestEntity.get(new URI(restApiUrl + "/documents/annotate/" + document.get("id").toString()))
+                        .accept(MediaType.APPLICATION_JSON).build();
+
+                ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
+
+                Map<String, Object> jsonDict = response.getBody();
+
+                String annotated = jsonDict.get("data").toString();
+
+                playground.setText(annotated);
+
+            } catch (URISyntaxException e) {
+                e.printStackTrace();
+            }
+        } else {
+            status.setText("Please load a document...");
         }
-        finalData.append(orgText.substring(prev_index,next_index));
-        String finaldata_with_even_spaces=Util.makeEvenSpaces(finalData.toString());
-        
-        if(Util.writeData(finaldata_with_even_spaces,inputFile.getParent()+File.separator+"Mod_"+inputFile.getName())!=null){
-            System.out.println("Successfuly Written");
-            status.setText("Status: Saved to File");
+    }
+
+
+    private void loadActionPerformed(java.awt.event.ActionEvent evt) {
+        DocumentSelector documentSelector = new DocumentSelector(this);
+    }
+
+    public void loadDocument(Map document) {
+        coordinates.clear();//clear the values
+
+        fileName.setText(document.get("filename").toString());
+        if (document.containsKey("annotated")) {
+            playground.setText(document.get("annotated").toString());
+        } else {
+            playground.setText(document.get("parsed").toString());
         }
-        else{
-            System.out.println("Error Occured");
-            status.setText("Status: Couldn't save File");
+        status.setText("Status: File loaded");
+        this.document = document;
+    }
+
+    private void saveActionPerformed(java.awt.event.ActionEvent evt) {
+        if (document != null) {
+            coordinates=Util.removeSingleChar(coordinates);
+            String orgText=playground.getText();
+            orgText=orgText.replaceAll("\r", "");
+
+            int prev_index=0,next_index=orgText.length();
+            Collections.sort(coordinates);
+            StringBuilder finalData=new StringBuilder();
+
+            for (Offset data : coordinates) {
+                int start=data.getStart();
+                int end=data.getEnd();
+                String orgStr=orgText.substring(start, end);
+                String newStr=" <START:FAC> "+orgStr+" <END> ";
+
+                finalData.append(orgText.substring(prev_index, start));
+                if(newStr!=null)
+                    finalData.append(newStr);
+
+                prev_index=end;
+            }
+            finalData.append(orgText.substring(prev_index,next_index));
+            String finaldata_with_even_spaces=Util.makeEvenSpaces(finalData.toString());
+
+            if (document.containsKey("annotated")) {
+                document.replace("annotated", finaldata_with_even_spaces);
+            } else {
+                document.put("annotated", finaldata_with_even_spaces);
+            }
+
+            try {
+
+                MultiValueMap<String, String> doc = new LinkedMultiValueMap<>();
+                for (Object key : document.keySet()) {
+                    String docKey = key.toString();
+                    String value = document.get(key).toString();
+                    doc.add(docKey, value);
+                }
+
+                MultiValueMap<String, Object> metadata = new LinkedMultiValueMap<>();
+                metadata.add("metadata", doc);
+
+                ParameterizedTypeReference<HashMap<String, Object>> responseType =
+                        new ParameterizedTypeReference<HashMap<String, Object>>() {};
+
+                RequestEntity<Map> request = RequestEntity.put(new URI(restApiUrl + "/documents/metadata/" + document.get("id").toString()))
+                        .accept(MediaType.APPLICATION_JSON)
+                        .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA_VALUE)
+                        .body(metadata);
+
+                ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
+
+                if (response.getStatusCode() == HttpStatus.OK) {
+                    status.setText("Save Successful");
+                } else {
+                    status.setText("SAVE FAILURE!!!");
+                }
+
+                Map<String, Object> jsonDict = response.getBody();
+
+            } catch (URISyntaxException e) {
+                e.printStackTrace();
+            }
+        } else {
+            status.setText("Please load a document...");
         }
-        
     }
 
     private void eventListeners() {
@@ -233,8 +303,10 @@ public class Main extends javax.swing.JFrame {
     private javax.swing.JLabel fileName;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JButton load;
+    private javax.swing.JButton annotate;
+    private javax.swing.JButton reset;
     private javax.swing.JTextPane playground;
     private javax.swing.JLabel status;
-    private javax.swing.JButton submit;
+    private javax.swing.JButton save;
     // End of variables declaration//GEN-END:variables
 }
