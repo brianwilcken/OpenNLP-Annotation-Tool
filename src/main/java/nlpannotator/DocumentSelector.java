@@ -86,5 +86,6 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
         int index = listSelectionEvent.getFirstIndex();
         Map doc = documents.get(index);
         annotatorUI.loadDocument(doc);
+        setVisible(false);
     }
 }
