@@ -307,6 +307,7 @@ public class Main extends javax.swing.JFrame {
         if (document != null) {
             if (findAndReplace == null) {
                 findAndReplace = new FindAndReplace("FindAndReplace", this);
+                findAndReplace.init();
             } else {
                 findAndReplace.setVisible(true);
             }
