@@ -1,5 +1,8 @@
 package nlpannotator;
 
+import com.google.common.base.Strings;
+import com.intellij.uiDesigner.core.GridConstraints;
+import com.intellij.uiDesigner.core.GridLayoutManager;
 import org.apache.commons.lang.ArrayUtils;
 
 import javax.swing.*;
@@ -9,6 +12,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.Arrays;
+import java.util.List;
 
 public class FindAndReplace extends JFrame implements ListSelectionListener {
     public static void main(String[] args) {
@@ -87,8 +91,10 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
 
     private void findActionPerformed(ActionEvent actionEvent) {
         String find = txtFind.getText();
-        addFoundElement(find);
-        txtFind.setText("");
+        if (!Strings.isNullOrEmpty(find)) {
+            addFoundElement(find);
+            txtFind.setText("");
+        }
     }
 
     private void addFoundElement(String find) {
@@ -102,7 +108,7 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
     }
 
     private void replaceAllActionPerformed(ActionEvent actionEvent) {
-        java.util.List selections = lsFound.getSelectedValuesList();
+        List selections = lsFound.getSelectedValuesList();
         String replace = txtReplace.getText();
 
         annotator.replaceAllText(selections, replace);
@@ -112,27 +118,33 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
     }
 
     private void removeActionPerformed(ActionEvent actionEvent) {
-        java.util.List selections = lsFound.getSelectedValuesList();
+        List selections = lsFound.getSelectedValuesList();
         for (Object selected : selections) {
             found.removeElement(selected);
         }
-        annotator.removeHighlights(selections);
+        // annotator.removeHighlights(selections);
     }
 
     private void resetActionPerformed(ActionEvent actionEvent) {
-        annotator.removeHighlights(Arrays.asList(found.toArray()));
+        //annotator.removeHighlights(Arrays.asList(found.toArray()));
         found.clear();
     }
 
     @Override
     public void valueChanged(ListSelectionEvent listSelectionEvent) {
-        java.util.List selections = lsFound.getSelectedValuesList();
-        annotator.removeHighlights(Arrays.asList(found.toArray()));
+        List selections = lsFound.getSelectedValuesList();
+        annotator.removeHighlights();
+        annotator.highlightAnnotations();
         annotator.highlightFound(selections);
     }
 
     public void findHighlighted(String selectedText) {
         addFoundElement(selectedText);
+    }
+
+    public List getListSelections() {
+        List selections = lsFound.getSelectedValuesList();
+        return selections;
     }
 
     {
@@ -151,40 +163,40 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
      */
     private void $$$setupUI$$$() {
         jPanelFindAndReplace = new JPanel();
-        jPanelFindAndReplace.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(5, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jPanelFindAndReplace.setLayout(new GridLayoutManager(5, 3, new Insets(0, 0, 0, 0), -1, -1));
         final JLabel label1 = new JLabel();
         label1.setText("Find:");
-        jPanelFindAndReplace.add(label1, new com.intellij.uiDesigner.core.GridConstraints(0, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jPanelFindAndReplace.add(label1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label2 = new JLabel();
         label2.setText("Replace With:");
-        jPanelFindAndReplace.add(label2, new com.intellij.uiDesigner.core.GridConstraints(2, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jPanelFindAndReplace.add(label2, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         findButton = new JButton();
         findButton.setText("Find");
-        jPanelFindAndReplace.add(findButton, new com.intellij.uiDesigner.core.GridConstraints(1, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jPanelFindAndReplace.add(findButton, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label3 = new JLabel();
         label3.setText("Found:");
-        jPanelFindAndReplace.add(label3, new com.intellij.uiDesigner.core.GridConstraints(0, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jPanelFindAndReplace.add(label3, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         removeButton = new JButton();
         removeButton.setText("Remove");
-        jPanelFindAndReplace.add(removeButton, new com.intellij.uiDesigner.core.GridConstraints(3, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jPanelFindAndReplace.add(removeButton, new GridConstraints(3, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         spFound = new JScrollPane();
-        jPanelFindAndReplace.add(spFound, new com.intellij.uiDesigner.core.GridConstraints(1, 2, 2, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(200, 100), null, 0, false));
+        jPanelFindAndReplace.add(spFound, new GridConstraints(1, 2, 2, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(200, 100), null, 0, false));
         lsFound = new JList();
         spFound.setViewportView(lsFound);
         final JScrollPane scrollPane1 = new JScrollPane();
-        jPanelFindAndReplace.add(scrollPane1, new com.intellij.uiDesigner.core.GridConstraints(0, 1, 2, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        jPanelFindAndReplace.add(scrollPane1, new GridConstraints(0, 1, 2, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         txtFind = new JTextArea();
         scrollPane1.setViewportView(txtFind);
         final JScrollPane scrollPane2 = new JScrollPane();
-        jPanelFindAndReplace.add(scrollPane2, new com.intellij.uiDesigner.core.GridConstraints(2, 1, 3, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(200, 100), null, 0, false));
+        jPanelFindAndReplace.add(scrollPane2, new GridConstraints(2, 1, 3, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(200, 100), null, 0, false));
         txtReplace = new JTextArea();
         scrollPane2.setViewportView(txtReplace);
         replaceAllButton = new JButton();
         replaceAllButton.setText("Replace All");
-        jPanelFindAndReplace.add(replaceAllButton, new com.intellij.uiDesigner.core.GridConstraints(3, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jPanelFindAndReplace.add(replaceAllButton, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         resetButton = new JButton();
         resetButton.setText("Reset");
-        jPanelFindAndReplace.add(resetButton, new com.intellij.uiDesigner.core.GridConstraints(4, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jPanelFindAndReplace.add(resetButton, new GridConstraints(4, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     }
 
     /**

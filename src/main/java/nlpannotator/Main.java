@@ -62,7 +62,9 @@ public class Main extends javax.swing.JFrame {
                             e1.printStackTrace();
                         }
                     }
+                    removeHighlights();
                     highlightAnnotations();
+                    highlightFound();
                 } else if (e.getKeyCode() == KeyEvent.VK_F2) {
                     //F2 key
                     Highlight[] highlights = playground.getHighlighter().getHighlights();
@@ -83,7 +85,9 @@ public class Main extends javax.swing.JFrame {
                             e1.printStackTrace();
                         }
                     }
+                    removeHighlights();
                     highlightAnnotations();
+                    highlightFound();
                 } else if ((e.getKeyCode() == KeyEvent.VK_F) && ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0)) {
                     findActionPerformed(null);
                 }
@@ -103,7 +107,7 @@ public class Main extends javax.swing.JFrame {
         return annotation;
     }
 
-    private void highlightAnnotations() {
+    public void highlightAnnotations() {
         highlightText(getAnnotation(), true, Color.BLUE, null);
         String endAnnotation = " <END> ";
         highlightText(endAnnotation, true, Color.RED, null);
@@ -142,10 +146,22 @@ public class Main extends javax.swing.JFrame {
         }
     }
 
-    public void removeHighlights(List remove) {
-        for (Object str : remove) {
-            highlightText((String)str, false, Color.BLACK, Color.WHITE);
+    private void highlightFound() {
+        if (findAndReplace != null) {
+            List selections = findAndReplace.getListSelections();
+            highlightFound(selections);
         }
+    }
+
+    public void removeHighlights() {
+        Document doc = playground.getDocument();
+        StyledDocument style = playground.getStyledDocument();
+        StyleContext sc = StyleContext.getDefaultStyleContext();
+        AttributeSet empty = sc.getEmptySet();
+        AttributeSet foreground = sc.addAttribute(empty, StyleConstants.Foreground, Color.BLACK);
+        AttributeSet background = sc.addAttribute(foreground, StyleConstants.Background, Color.WHITE);
+        AttributeSet bold = sc.addAttribute(background, StyleConstants.Bold, false);
+        style.setCharacterAttributes(0, doc.getLength(), bold, true);
     }
 
     public void replaceAllText(List selections, String replace) {
@@ -156,7 +172,7 @@ public class Main extends javax.swing.JFrame {
                 text = text.replaceAll((String)selection, replace);
             }
             playground.setText(text);
-            highlightAnnotations();
+            //highlightAnnotations();
         } catch (BadLocationException e) {
             e.printStackTrace();
         }
@@ -264,9 +280,9 @@ public class Main extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 60, Short.MAX_VALUE)
                 .addComponent(lblTag)
                 .addComponent(type)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 60, Short.MAX_VALUE)
-                .addComponent(annotate)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 140, Short.MAX_VALUE)
+                .addComponent(annotate)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 5, Short.MAX_VALUE)
                 .addComponent(slider)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 140, Short.MAX_VALUE)
                 .addComponent(reset)
@@ -403,6 +419,7 @@ public class Main extends javax.swing.JFrame {
         playground.setCaretPosition(0);
         status.setText("Status: File loaded");
         this.document = document;
+        removeHighlights();
         highlightAnnotations();
     }
 
