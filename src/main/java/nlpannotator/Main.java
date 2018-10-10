@@ -15,6 +15,7 @@ import java.awt.event.KeyListener;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
+import java.util.List;
 import javax.swing.*;
 import javax.swing.event.CaretEvent;
 import javax.swing.text.*;
@@ -61,7 +62,9 @@ public class Main extends javax.swing.JFrame {
                             e1.printStackTrace();
                         }
                     }
+                    removeHighlights();
                     highlightAnnotations();
+                    highlightFound();
                 } else if (e.getKeyCode() == KeyEvent.VK_F2) {
                     //F2 key
                     Highlight[] highlights = playground.getHighlighter().getHighlights();
@@ -82,9 +85,11 @@ public class Main extends javax.swing.JFrame {
                             e1.printStackTrace();
                         }
                     }
+                    removeHighlights();
                     highlightAnnotations();
+                    highlightFound();
                 } else if ((e.getKeyCode() == KeyEvent.VK_F) && ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0)) {
-
+                    findActionPerformed(null);
                 }
             }
         }
@@ -102,37 +107,72 @@ public class Main extends javax.swing.JFrame {
         return annotation;
     }
 
-    private void highlightAnnotations() {
-        StyledDocument style = playground.getStyledDocument();
+    public void highlightAnnotations() {
+        highlightText(getAnnotation(), true, Color.BLUE, null);
+        String endAnnotation = " <END> ";
+        highlightText(endAnnotation, true, Color.RED, null);
+    }
 
+    private void highlightText(String str, Boolean isBold, Color foreColor, Color backColor) {
+        StyledDocument style = playground.getStyledDocument();
         Document doc = playground.getDocument();
         try {
             String text = doc.getText(0, doc.getLength());
-            String annotation = getAnnotation();
-            int len = annotation.length();
-            int index = text.indexOf(annotation);
+            int len = str.length();
+            int index = text.indexOf(str);
             while (index >= 0) {
                 int end = index + len;
                 AttributeSet oldSet = style.getCharacterElement(end - 1).getAttributes();
                 StyleContext sc = StyleContext.getDefaultStyleContext();
-                AttributeSet blue = sc.addAttribute(oldSet, StyleConstants.Foreground, Color.BLUE);
-                AttributeSet bold = sc.addAttribute(blue, StyleConstants.Bold, true);
-                style.setCharacterAttributes(index, len, bold, true);
-                index = text.indexOf(annotation, index + 1);
-            }
+                AttributeSet textColor = sc.addAttribute(oldSet, StyleConstants.Foreground, foreColor);
+                AttributeSet bold = sc.addAttribute(textColor, StyleConstants.Bold, isBold);
+                if (backColor != null) {
+                    AttributeSet background = sc.addAttribute(bold, StyleConstants.Background, backColor);
+                    style.setCharacterAttributes(index, len, background, true);
+                } else {
+                    style.setCharacterAttributes(index, len, bold, true);
+                }
 
-            String endAnnotation = " <END> ";
-            len = endAnnotation.length();
-            index = text.indexOf(endAnnotation);
-            while (index >= 0) {
-                int end = index + len;
-                AttributeSet oldSet = style.getCharacterElement(end - 1).getAttributes();
-                StyleContext sc = StyleContext.getDefaultStyleContext();
-                AttributeSet blue = sc.addAttribute(oldSet, StyleConstants.Foreground, Color.RED);
-                AttributeSet bold = sc.addAttribute(blue, StyleConstants.Bold, true);
-                style.setCharacterAttributes(index, len, bold, true);
-                index = text.indexOf(endAnnotation, index + 1);
+                index = text.indexOf(str, index + 1);
             }
+        } catch (BadLocationException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void highlightFound(List found) {
+        for (Object str : found) {
+            highlightText((String)str, true, Color.GREEN, Color.BLACK);
+        }
+    }
+
+    private void highlightFound() {
+        if (findAndReplace != null) {
+            List selections = findAndReplace.getListSelections();
+            highlightFound(selections);
+        }
+    }
+
+    public void removeHighlights() {
+        Document doc = playground.getDocument();
+        StyledDocument style = playground.getStyledDocument();
+        StyleContext sc = StyleContext.getDefaultStyleContext();
+        AttributeSet empty = sc.getEmptySet();
+        AttributeSet foreground = sc.addAttribute(empty, StyleConstants.Foreground, Color.BLACK);
+        AttributeSet background = sc.addAttribute(foreground, StyleConstants.Background, Color.WHITE);
+        AttributeSet bold = sc.addAttribute(background, StyleConstants.Bold, false);
+        style.setCharacterAttributes(0, doc.getLength(), bold, true);
+    }
+
+    public void replaceAllText(List selections, String replace) {
+        Document doc = playground.getDocument();
+        try {
+            String text = doc.getText(0, doc.getLength());
+            for (Object selection : selections) {
+                text = text.replaceAll((String)selection, replace);
+            }
+            playground.setText(text);
+            //highlightAnnotations();
         } catch (BadLocationException e) {
             e.printStackTrace();
         }
@@ -147,11 +187,15 @@ public class Main extends javax.swing.JFrame {
         train = new javax.swing.JButton();
         annotate = new javax.swing.JButton();
         reset = new javax.swing.JButton();
+        find = new javax.swing.JButton();
         save = new javax.swing.JButton();
         docTitle = new javax.swing.JLabel();
         status = new javax.swing.JLabel();
         type = new JTextField(5);
         type.setText("FAC");
+
+        JLabel lblTag = new JLabel();
+        lblTag.setText("Annotation Tag:");
 
         DefaultBoundedRangeModel model = new DefaultBoundedRangeModel(50, 0, 1, 100);
         slider = new JSlider(model);
@@ -205,6 +249,13 @@ public class Main extends javax.swing.JFrame {
             }
         });
 
+        find.setText("Find/Replace");
+        find.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                findActionPerformed(evt);
+            }
+        });
+
         save.setText("Save");
         save.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -225,16 +276,19 @@ public class Main extends javax.swing.JFrame {
                 .addGap(18, 18, 18)
                 .addComponent(load)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 60, Short.MAX_VALUE)
-                    .addComponent(train)
-                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 60, Short.MAX_VALUE)
-                    .addComponent(type)
-                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 60, Short.MAX_VALUE)
-                    .addComponent(annotate)
-                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 140, Short.MAX_VALUE)
-                    .addComponent(slider)
-                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 140, Short.MAX_VALUE)
-                    .addComponent(reset)
-                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 140, Short.MAX_VALUE)
+                .addComponent(train)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 60, Short.MAX_VALUE)
+                .addComponent(lblTag)
+                .addComponent(type)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 140, Short.MAX_VALUE)
+                .addComponent(annotate)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 5, Short.MAX_VALUE)
+                .addComponent(slider)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 140, Short.MAX_VALUE)
+                .addComponent(reset)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 60, Short.MAX_VALUE)
+                .addComponent(find)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 140, Short.MAX_VALUE)
                 .addComponent(status, javax.swing.GroupLayout.PREFERRED_SIZE, 260, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(save)
@@ -248,10 +302,12 @@ public class Main extends javax.swing.JFrame {
                     .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(load)
                             .addComponent(train)
+                            .addComponent(lblTag)
                             .addComponent(type)
                             .addComponent(annotate)
                             .addComponent(slider)
                             .addComponent(reset)
+                            .addComponent(find)
                             .addComponent(save)
                             .addComponent(docTitle, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addComponent(status, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
@@ -260,6 +316,31 @@ public class Main extends javax.swing.JFrame {
         );
 
         pack();
+    }
+
+    private FindAndReplace findAndReplace;
+    private void findActionPerformed(ActionEvent evt) {
+        if (document != null) {
+            if (findAndReplace == null) {
+                findAndReplace = new FindAndReplace("FindAndReplace", this);
+                findAndReplace.init();
+            } else {
+                findAndReplace.setVisible(true);
+            }
+            Highlight[] highlights = playground.getHighlighter().getHighlights();
+            for (Highlight highlight : highlights) {
+                Document doc = playground.getDocument();
+                int start = highlight.getStartOffset();
+                int end = highlight.getEndOffset();
+                int caretPos = playground.getCaretPosition();
+                try {
+                    String selectedText = doc.getText(start, end - start);
+                    findAndReplace.findHighlighted(selectedText);
+                } catch (BadLocationException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
     private void trainModelActionPerformed(ActionEvent evt) {
@@ -339,6 +420,7 @@ public class Main extends javax.swing.JFrame {
         playground.setCaretPosition(0);
         status.setText("Status: News loaded");
         this.document = document;
+        removeHighlights();
         highlightAnnotations();
     }
 
@@ -455,6 +537,7 @@ public class Main extends javax.swing.JFrame {
     private javax.swing.JButton train;
     private javax.swing.JButton annotate;
     private javax.swing.JButton reset;
+    private javax.swing.JButton find;
     private javax.swing.JTextPane playground;
     private javax.swing.JLabel status;
     private javax.swing.JButton save;
