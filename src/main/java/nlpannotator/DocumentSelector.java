@@ -48,7 +48,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
             ParameterizedTypeReference<HashMap<String, Object>> responseType =
                     new ParameterizedTypeReference<HashMap<String, Object>>() {};
 
-            RequestEntity<Void> request = RequestEntity.get(new URI(restApiUrl + "/documents"))
+            RequestEntity<Void> request = RequestEntity.get(new URI(restApiUrl + "/news?symbol=AMRN&rows=10"))
                     .accept(MediaType.APPLICATION_JSON).build();
 
             ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
@@ -59,7 +59,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
 
             DefaultListModel<String> docsModel = new DefaultListModel<>();
             for (Map document : documents) {
-                docsModel.addElement(document.get("filename").toString());
+                docsModel.addElement(document.get("title").toString());
             }
 
 

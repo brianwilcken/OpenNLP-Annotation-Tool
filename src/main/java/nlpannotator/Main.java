@@ -148,7 +148,7 @@ public class Main extends javax.swing.JFrame {
         annotate = new javax.swing.JButton();
         reset = new javax.swing.JButton();
         save = new javax.swing.JButton();
-        fileName = new javax.swing.JLabel();
+        docTitle = new javax.swing.JLabel();
         status = new javax.swing.JLabel();
         type = new JTextField(5);
         type.setText("FAC");
@@ -221,7 +221,7 @@ public class Main extends javax.swing.JFrame {
             .addComponent(jScrollPane1)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                 .addGap(2, 2, 2)
-                .addComponent(fileName, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(docTitle, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
                 .addComponent(load)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 60, Short.MAX_VALUE)
@@ -253,7 +253,7 @@ public class Main extends javax.swing.JFrame {
                             .addComponent(slider)
                             .addComponent(reset)
                             .addComponent(save)
-                            .addComponent(fileName, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(docTitle, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addComponent(status, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 480, Short.MAX_VALUE))
@@ -329,14 +329,15 @@ public class Main extends javax.swing.JFrame {
     }
 
     public void loadDocument(Map document) {
-        fileName.setText(document.get("filename").toString());
-        if (document.containsKey("annotated")) {
-            playground.setText(document.get("annotated").toString());
+        docTitle.setText(document.get("title").toString());
+        String annotated = (String)document.get("annotated");
+        if (annotated != null) {
+            playground.setText(annotated);
         } else {
-            playground.setText(document.get("parsed").toString());
+            playground.setText(document.get("body").toString());
         }
         playground.setCaretPosition(0);
-        status.setText("Status: File loaded");
+        status.setText("Status: News loaded");
         this.document = document;
         highlightAnnotations();
     }
@@ -448,7 +449,7 @@ public class Main extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JLabel fileName;
+    private javax.swing.JLabel docTitle;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JButton load;
     private javax.swing.JButton train;
