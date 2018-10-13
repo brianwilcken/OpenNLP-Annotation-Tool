@@ -14,6 +14,8 @@ import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
@@ -26,6 +28,8 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
     private JPanel panel1;
     private JList<String> list1;
     private JScrollPane scrollPane1;
+    private JTextField txtSymbol;
+    private JButton fetchNewsButton;
     private List<Map> documents;
     private Main annotatorUI;
 
@@ -44,14 +48,28 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
     }
 
     private void populate() {
+        list1.setSelectionMode(ListSelectionModel.SINGLE_INTERVAL_SELECTION);
+        list1.setLayoutOrientation(JList.HORIZONTAL_WRAP);
+        list1.setVisibleRowCount(-1);
+        list1.addListSelectionListener(this);
+
+        fetchNewsButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                fetchNewsActionPerformed(e);
+            }
+        });
+    }
+
+    private void fetchNewsActionPerformed(ActionEvent actionEvent) {
         try {
-            panel1 = new JPanel();
+            String symbol = txtSymbol.getText();
 
             ParameterizedTypeReference<HashMap<String, Object>> responseType =
                     new ParameterizedTypeReference<HashMap<String, Object>>() {
                     };
 
-            RequestEntity<Void> request = RequestEntity.get(new URI(restApiUrl + "/news?symbol=AMRN&rows=10"))
+            RequestEntity<Void> request = RequestEntity.get(new URI(restApiUrl + "/news?symbols=" + symbol + "&rows=10"))
                     .accept(MediaType.APPLICATION_JSON).build();
 
             ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
@@ -65,24 +83,11 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
                 docsModel.addElement(document.get("title").toString());
             }
 
-
-            list1 = new JList<>(docsModel);
-            list1.setSelectionMode(ListSelectionModel.SINGLE_INTERVAL_SELECTION);
-            list1.setLayoutOrientation(JList.HORIZONTAL_WRAP);
-            list1.setVisibleRowCount(-1);
-            list1.addListSelectionListener(this);
-
-            scrollPane1 = new JScrollPane(list1);
-
-            scrollPane1.setPreferredSize(new Dimension(400, 200));
-
-            panel1.add(scrollPane1);
-
+            list1.setModel(docsModel);
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }
     }
-
 
     @Override
     public void valueChanged(ListSelectionEvent listSelectionEvent) {

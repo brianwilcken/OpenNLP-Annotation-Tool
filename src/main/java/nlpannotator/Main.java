@@ -192,7 +192,7 @@ public class Main extends javax.swing.JFrame {
         docTitle = new javax.swing.JLabel();
         status = new javax.swing.JLabel();
         type = new JTextField(5);
-        type.setText("FAC");
+        type.setText("SYM");
 
         JLabel lblTag = new JLabel();
         lblTag.setText("Annotation Tag:");
@@ -280,16 +280,16 @@ public class Main extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 60, Short.MAX_VALUE)
                 .addComponent(lblTag)
                 .addComponent(type)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 140, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 60, Short.MAX_VALUE)
                 .addComponent(annotate)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 5, Short.MAX_VALUE)
                 .addComponent(slider)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 140, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 60, Short.MAX_VALUE)
                 .addComponent(reset)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 60, Short.MAX_VALUE)
                 .addComponent(find)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 140, Short.MAX_VALUE)
-                .addComponent(status, javax.swing.GroupLayout.PREFERRED_SIZE, 260, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 60, Short.MAX_VALUE)
+                .addComponent(status, javax.swing.GroupLayout.PREFERRED_SIZE, 160, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(save)
                 .addGap(29, 29, 29))
@@ -350,7 +350,7 @@ public class Main extends javax.swing.JFrame {
                         new ParameterizedTypeReference<HashMap<String, Object>>() {
                         };
 
-                RequestEntity<Void> request = RequestEntity.get(new URI(restApiUrl + "/documents/trainNER" + "?category=" + document.get("category").toString()))
+                RequestEntity<Void> request = RequestEntity.get(new URI(restApiUrl + "/trainNER"))
                         .accept(MediaType.APPLICATION_JSON).build();
 
                 ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
@@ -384,7 +384,7 @@ public class Main extends javax.swing.JFrame {
                 ParameterizedTypeReference<HashMap<String, Object>> responseType =
                         new ParameterizedTypeReference<HashMap<String, Object>>() {};
 
-                RequestEntity<Void> request = RequestEntity.get(new URI(restApiUrl + "/documents/annotate/" + document.get("id").toString() + "?threshold=" + threshold))
+                RequestEntity<Void> request = RequestEntity.get(new URI(restApiUrl + "/annotate/" + document.get("id").toString() + "?threshold=" + threshold))
                         .accept(MediaType.APPLICATION_JSON).build();
 
                 ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
@@ -415,7 +415,7 @@ public class Main extends javax.swing.JFrame {
         if (annotated != null) {
             playground.setText(annotated);
         } else {
-            playground.setText(document.get("body").toString());
+            playground.setText(document.get("parsed").toString());
         }
         playground.setCaretPosition(0);
         status.setText("Status: News loaded");
@@ -436,20 +436,22 @@ public class Main extends javax.swing.JFrame {
                 Map<String, String> doc = new HashMap<>();
                 for (Object key : document.keySet()) {
                     String docKey = key.toString();
-                    String value = document.get(key).toString();
-                    doc.put(docKey, value);
+                    if (document.get(key) != null) {
+                        String value = document.get(key).toString();
+                        doc.put(docKey, value);
+                    }
                 }
 
-                MultiValueMap<String, Object> metadata = new LinkedMultiValueMap<>();
-                metadata.add("metadata", doc);
+                MultiValueMap<String, Object> newsData = new LinkedMultiValueMap<>();
+                newsData.add("newsData", doc);
 
                 ParameterizedTypeReference<HashMap<String, Object>> responseType =
                         new ParameterizedTypeReference<HashMap<String, Object>>() {};
 
-                RequestEntity<Map> request = RequestEntity.put(new URI(restApiUrl + "/documents/metadata/" + document.get("id").toString()))
+                RequestEntity<Map> request = RequestEntity.put(new URI(restApiUrl + "/news/" + document.get("id").toString()))
                         .accept(MediaType.APPLICATION_JSON)
                         .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA_VALUE)
-                        .body(metadata);
+                        .body(newsData);
 
                 ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
 
