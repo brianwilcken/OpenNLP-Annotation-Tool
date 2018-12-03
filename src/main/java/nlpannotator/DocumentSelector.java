@@ -63,7 +63,8 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
             DefaultListModel<String> docsModel = new DefaultListModel<>();
             for (Map document : documents) {
                 if (document.containsKey("docText")) {
-                    docsModel.addElement(document.get("filename").toString());
+                    String displayText = document.get("filename").toString() + " (" + document.get("category").toString() + ")";
+                    docsModel.addElement(displayText);
                 }
             }
 
@@ -112,8 +113,10 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
         panel1 = new JPanel();
         panel1.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
         scrollPane1 = new JScrollPane();
-        panel1.add(scrollPane1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(200, 200), new Dimension(200, 200), new Dimension(200, 600), 0, false));
+        scrollPane1.setHorizontalScrollBarPolicy(30);
+        panel1.add(scrollPane1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(600, 300), new Dimension(600, 300), null, 0, false));
         list1 = new JList();
+        list1.setLayoutOrientation(0);
         scrollPane1.setViewportView(list1);
     }
 

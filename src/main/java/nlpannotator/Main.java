@@ -1,5 +1,6 @@
 package nlpannotator;
 
+import com.google.common.base.Strings;
 import common.Tools;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
@@ -184,18 +185,25 @@ public class Main extends javax.swing.JFrame {
         jScrollPane1 = new javax.swing.JScrollPane();
         playground = new javax.swing.JTextPane();
         load = new javax.swing.JButton();
-        train = new javax.swing.JButton();
+        trainNER = new javax.swing.JButton();
         annotate = new javax.swing.JButton();
         reset = new javax.swing.JButton();
         find = new javax.swing.JButton();
         save = new javax.swing.JButton();
+        process = new javax.swing.JButton();
+        highlight = new JButton();
         fileName = new javax.swing.JLabel();
         status = new javax.swing.JLabel();
-        type = new JTextField(5);
-        type.setText("FAC");
+        type = new JTextField(15);
+        type.setText("Water");
+        doccat = new JTextField(15);
+        trainDoccat = new JButton();
 
-        JLabel lblTag = new JLabel();
-        lblTag.setText("Annotation Tag:");
+        JLabel annotationLblTag = new JLabel();
+        annotationLblTag.setText("Annotation Tag:");
+
+        JLabel doccatLblTag = new JLabel();
+        doccatLblTag.setText("Document Category:");
 
         DefaultBoundedRangeModel model = new DefaultBoundedRangeModel(50, 0, 1, 100);
         slider = new JSlider(model);
@@ -228,14 +236,28 @@ public class Main extends javax.swing.JFrame {
             }
         });
 
-        train.setText("Train Model");
-        train.addActionListener(new java.awt.event.ActionListener() {
+        trainNER.setText("Train NER Model");
+        trainNER.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                trainModelActionPerformed(evt);
+                trainNERModelActionPerformed(evt);
             }
         });
 
-        annotate.setText("Auto Detect");
+        trainDoccat.setText("Train DocCat Model");
+        trainDoccat.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                trainDoccatModelActionPerformed(evt);
+            }
+        });
+
+        highlight.setText("Refresh Tag Highlights");
+        highlight.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                highlightActionPerformed(evt);
+            }
+        });
+
+        annotate.setText("Auto Detect NER");
         annotate.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 autoAnnotateActionPerformed(evt);
@@ -256,10 +278,17 @@ public class Main extends javax.swing.JFrame {
             }
         });
 
-        save.setText("Save");
+        save.setText("Save Document");
         save.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                saveActionPerformed(evt);
+                saveActionPerformed(evt, false);
+            }
+        });
+
+        process.setText("Process Document");
+        process.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                saveActionPerformed(evt, true);
             }
         });
 
@@ -271,28 +300,37 @@ public class Main extends javax.swing.JFrame {
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addComponent(jScrollPane1)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                .addGap(2, 2, 2)
-                .addComponent(fileName, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
-                .addComponent(load)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 60, Short.MAX_VALUE)
-                .addComponent(train)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 60, Short.MAX_VALUE)
-                .addComponent(lblTag)
-                .addComponent(type)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 140, Short.MAX_VALUE)
-                .addComponent(annotate)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 5, Short.MAX_VALUE)
-                .addComponent(slider)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 140, Short.MAX_VALUE)
-                .addComponent(reset)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 60, Short.MAX_VALUE)
-                .addComponent(find)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 140, Short.MAX_VALUE)
-                .addComponent(status, javax.swing.GroupLayout.PREFERRED_SIZE, 260, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(save)
-                .addGap(29, 29, 29))
+                    .addGap(2, 2, 2)
+                    .addComponent(fileName, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGap(18, 18, 18)
+                    .addComponent(load)
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 100, Short.MAX_VALUE)
+                    .addComponent(annotationLblTag)
+                    .addComponent(type)
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 10, Short.MAX_VALUE)
+                    .addComponent(highlight)
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 10, Short.MAX_VALUE)
+                    .addComponent(annotate)
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 5, Short.MAX_VALUE)
+                    .addComponent(slider)
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 10, Short.MAX_VALUE)
+                    .addComponent(trainNER)
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 100, Short.MAX_VALUE)
+                    .addComponent(doccatLblTag)
+                    .addComponent(doccat)
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 10, Short.MAX_VALUE)
+                    .addComponent(trainDoccat)
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 100, Short.MAX_VALUE)
+                    .addComponent(reset)
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 20, Short.MAX_VALUE)
+                    .addComponent(find)
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 60, Short.MAX_VALUE)
+                    .addComponent(status, javax.swing.GroupLayout.PREFERRED_SIZE, 260, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                    .addComponent(save)
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 5, Short.MAX_VALUE)
+                    .addComponent(process)
+                    .addGap(29, 29, 29))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -301,14 +339,19 @@ public class Main extends javax.swing.JFrame {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(load)
-                            .addComponent(train)
-                            .addComponent(lblTag)
+                            .addComponent(annotationLblTag)
                             .addComponent(type)
+                            .addComponent(highlight)
                             .addComponent(annotate)
                             .addComponent(slider)
+                            .addComponent(trainNER)
+                            .addComponent(doccatLblTag)
+                            .addComponent(doccat)
+                            .addComponent(trainDoccat)
                             .addComponent(reset)
                             .addComponent(find)
                             .addComponent(save)
+                            .addComponent(process)
                             .addComponent(fileName, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addComponent(status, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -343,7 +386,15 @@ public class Main extends javax.swing.JFrame {
         }
     }
 
-    private void trainModelActionPerformed(ActionEvent evt) {
+    private void highlightActionPerformed(ActionEvent evt) {
+        if (document != null) {
+            removeHighlights();
+            highlightAnnotations();
+            highlightFound();
+        }
+    }
+
+    private void trainNERModelActionPerformed(ActionEvent evt) {
         if (document != null) {
             try {
                 ParameterizedTypeReference<HashMap<String, Object>> responseType =
@@ -356,13 +407,34 @@ public class Main extends javax.swing.JFrame {
                 ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
 
                 if (response.getStatusCode() == HttpStatus.OK) {
-                    status.setText("Model Training Started");
+                    status.setText("NER Model Training Started");
                 } else {
                     status.setText("SERVER ERROR!!!");
                 }
             } catch (URISyntaxException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    private void trainDoccatModelActionPerformed(ActionEvent evt) {
+        try {
+            ParameterizedTypeReference<HashMap<String, Object>> responseType =
+                    new ParameterizedTypeReference<HashMap<String, Object>>() {
+                    };
+
+            RequestEntity<Void> request = RequestEntity.get(new URI(restApiUrl + "/documents/trainDoccat"))
+                    .accept(MediaType.APPLICATION_JSON).build();
+
+            ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
+
+            if (response.getStatusCode() == HttpStatus.OK) {
+                status.setText("DocCat Model Training Started");
+            } else {
+                status.setText("SERVER ERROR!!!");
+            }
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
         }
     }
 
@@ -411,6 +483,7 @@ public class Main extends javax.swing.JFrame {
 
     public void loadDocument(Map document) {
         fileName.setText(document.get("filename").toString());
+        doccat.setText(document.get("category").toString());
         if (document.containsKey("annotated")) {
             playground.setText(document.get("annotated").toString());
         } else {
@@ -423,13 +496,20 @@ public class Main extends javax.swing.JFrame {
         highlightAnnotations();
     }
 
-    private void saveActionPerformed(java.awt.event.ActionEvent evt) {
+    private void saveActionPerformed(java.awt.event.ActionEvent evt, boolean doNLP) {
         if (document != null) {
+            if (Strings.isNullOrEmpty(doccat.getText())) {
+                status.setText("Please enter a category...");
+                return;
+            }
+
             if (document.containsKey("annotated")) {
                 document.replace("annotated", playground.getText());
             } else {
                 document.put("annotated", playground.getText());
             }
+
+            document.replace("category", doccat.getText());
 
             try {
                 Map<String, String> doc = new HashMap<>();
@@ -439,8 +519,9 @@ public class Main extends javax.swing.JFrame {
                     doc.put(docKey, value);
                 }
 
-                MultiValueMap<String, Object> metadata = new LinkedMultiValueMap<>();
-                metadata.add("metadata", doc);
+                MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+                body.add("metadata", doc);
+                body.add("doNLP", doNLP);
 
                 ParameterizedTypeReference<HashMap<String, Object>> responseType =
                         new ParameterizedTypeReference<HashMap<String, Object>>() {};
@@ -448,12 +529,16 @@ public class Main extends javax.swing.JFrame {
                 RequestEntity<Map> request = RequestEntity.put(new URI(restApiUrl + "/documents/metadata/" + document.get("id").toString()))
                         .accept(MediaType.APPLICATION_JSON)
                         .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA_VALUE)
-                        .body(metadata);
+                        .body(body);
 
                 ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
 
                 if (response.getStatusCode() == HttpStatus.OK) {
-                    status.setText("Save Successful");
+                    if (doNLP) {
+                        status.setText("Document Processing Complete");
+                    } else {
+                        status.setText("Save Successful");
+                    }
                 } else {
                     status.setText("SAVE FAILURE!!!");
                 }
@@ -533,14 +618,18 @@ public class Main extends javax.swing.JFrame {
     private javax.swing.JLabel fileName;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JButton load;
-    private javax.swing.JButton train;
+    private javax.swing.JButton trainNER;
+    private javax.swing.JButton highlight;
     private javax.swing.JButton annotate;
     private javax.swing.JButton reset;
     private javax.swing.JButton find;
     private javax.swing.JTextPane playground;
     private javax.swing.JLabel status;
     private javax.swing.JButton save;
+    private javax.swing.JButton process;
     private JSlider slider;
     private JTextField type;
+    private JTextField doccat;
+    private JButton trainDoccat;
     // End of variables declaration//GEN-END:variables
 }
