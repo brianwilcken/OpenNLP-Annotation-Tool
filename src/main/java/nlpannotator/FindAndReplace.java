@@ -3,6 +3,8 @@ package nlpannotator;
 import com.google.common.base.Strings;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
+import common.Tools;
+import dictionary.Dictionary;
 import org.apache.commons.lang.ArrayUtils;
 
 import javax.swing.*;
@@ -12,12 +14,26 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class FindAndReplace extends JFrame implements ListSelectionListener {
     public static void main(String[] args) {
         FindAndReplace findAndReplace = new FindAndReplace("FindAndReplace", null);
         findAndReplace.init();
+    }
+
+    private static final Map<String, List<String>> dictionaries;
+
+    static {
+        dictionaries = new HashMap<>();
+        dictionaries.put("Water", Tools.extractEntriesFromDictionary(Tools.loadXML(Tools.getProperty("dict.water"), Dictionary.class)));
+        dictionaries.put("Wastewater_System", Tools.extractEntriesFromDictionary(Tools.loadXML(Tools.getProperty("dict.wastewater"), Dictionary.class)));
+        dictionaries.put("Recycled_Water_System", Tools.extractEntriesFromDictionary(Tools.loadXML(Tools.getProperty("dict.wastewater"), Dictionary.class)));
+        dictionaries.put("Electricity", Tools.extractEntriesFromDictionary(Tools.loadXML(Tools.getProperty("dict.power"), Dictionary.class)));
+        dictionaries.put("Petroleum", Tools.extractEntriesFromDictionary(Tools.loadXML(Tools.getProperty("dict.petro"), Dictionary.class)));
+        dictionaries.put("Natural_Gas", Tools.extractEntriesFromDictionary(Tools.loadXML(Tools.getProperty("dict.natgas"), Dictionary.class)));
     }
 
     private JButton findButton;
@@ -29,6 +45,7 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
     private JButton replaceAllButton;
     private JButton removeButton;
     private JScrollPane spFound;
+    private JButton loadDictionaryButton;
     private Main annotator;
 
     private DefaultListModel<String> found;
@@ -45,6 +62,7 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
 
         setTitle("Find And Replace");
         setContentPane(jPanelFindAndReplace);
+        setLocation(annotator.getLocationOnScreen());
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
         pack();
         setVisible(true);
@@ -77,6 +95,13 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
                 resetActionPerformed(actionEvent);
+            }
+        });
+
+        loadDictionaryButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                loadDictionaryActionPerformed(actionEvent);
             }
         });
 
@@ -130,6 +155,16 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
         found.clear();
     }
 
+    private void loadDictionaryActionPerformed(ActionEvent evt) {
+        String category = annotator.getDocumentCategory();
+        if (dictionaries.containsKey(category)) {
+            List<String> dict = dictionaries.get(category);
+            for (String entry : dict) {
+                addFoundElement(entry);
+            }
+        }
+    }
+
     @Override
     public void valueChanged(ListSelectionEvent listSelectionEvent) {
         List selections = lsFound.getSelectedValuesList();
@@ -163,7 +198,7 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
      */
     private void $$$setupUI$$$() {
         jPanelFindAndReplace = new JPanel();
-        jPanelFindAndReplace.setLayout(new GridLayoutManager(5, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jPanelFindAndReplace.setLayout(new GridLayoutManager(6, 3, new Insets(0, 0, 0, 0), -1, -1));
         final JLabel label1 = new JLabel();
         label1.setText("Find:");
         jPanelFindAndReplace.add(label1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -188,7 +223,7 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
         txtFind = new JTextArea();
         scrollPane1.setViewportView(txtFind);
         final JScrollPane scrollPane2 = new JScrollPane();
-        jPanelFindAndReplace.add(scrollPane2, new GridConstraints(2, 1, 3, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(200, 100), null, 0, false));
+        jPanelFindAndReplace.add(scrollPane2, new GridConstraints(2, 1, 4, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(200, 100), null, 0, false));
         txtReplace = new JTextArea();
         scrollPane2.setViewportView(txtReplace);
         replaceAllButton = new JButton();
@@ -197,6 +232,9 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
         resetButton = new JButton();
         resetButton.setText("Reset");
         jPanelFindAndReplace.add(resetButton, new GridConstraints(4, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        loadDictionaryButton = new JButton();
+        loadDictionaryButton.setText("Load Dictionary");
+        jPanelFindAndReplace.add(loadDictionaryButton, new GridConstraints(5, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     }
 
     /**

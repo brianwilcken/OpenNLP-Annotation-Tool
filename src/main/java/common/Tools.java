@@ -8,13 +8,19 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.core.io.ClassPathResource;
+
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Unmarshaller;
 
 public class Tools {
 
@@ -151,5 +157,29 @@ public class Tools {
     public static <T> Predicate<T> distinctByKey(Function<? super T, ?> keyExtractor) {
         Set<Object> seen = ConcurrentHashMap.newKeySet();
         return t -> seen.add(keyExtractor.apply(t));
+    }
+
+    public static Comparator<Map<String, Object>> documentComparator = new Comparator<Map<String, Object>>() {
+        public int compare(Map<String, Object> m1, Map<String, Object> m2) {
+            return m1.get("filename").toString().compareTo(m2.get("filename").toString());
+        }
+    };
+
+    public static <T> T loadXML(String xmlPath, Class<T> type) {
+        try {
+            ClassPathResource resource = new ClassPathResource(xmlPath);
+            JAXBContext jaxbContext = JAXBContext.newInstance(type);
+            Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
+            T obj = (T) unmarshaller.unmarshal(resource.getInputStream());
+            return obj;
+        } catch (JAXBException | IOException e) {
+            return null;
+        }
+    }
+
+    public static List<String> extractEntriesFromDictionary(dictionary.Dictionary dict) {
+        List<String> entries = dict.getEntry().stream().map(p -> StringUtils.join(p.getToken(), " ")).collect(Collectors.toList());
+
+        return entries;
     }
 }

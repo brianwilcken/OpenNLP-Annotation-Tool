@@ -8,25 +8,33 @@ import org.springframework.http.MediaType;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
+import javax.annotation.Resource;
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.HashMap;
+import java.net.URL;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 
 public class DocumentSelector extends JFrame implements ListSelectionListener {
     private RestTemplate restTemplate;
-    private final String restApiUrl = Tools.getProperty("restApi.url");
     private JPanel panel1;
     private JList<String> list1;
     private JScrollPane scrollPane1;
-    private List<Map> documents;
+    private JTextField textField1;
+    private JButton loadURLButton;
+    private List<Map<String, Object>> documents;
     private Main annotatorUI;
 
     public DocumentSelector(Main annotatorUI) {
@@ -37,28 +45,33 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
         populate();
 
         setTitle("Document Selector");
+        setLocation(annotatorUI.getLocationOnScreen());
         setContentPane(panel1);
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
         pack();
         setVisible(true);
     }
 
+    public static void main(String[] args) {
+        DocumentSelector selector = new DocumentSelector(null);
+    }
+
     private void populate() {
         try {
-            panel1 = new JPanel();
-
             ParameterizedTypeReference<HashMap<String, Object>> responseType =
                     new ParameterizedTypeReference<HashMap<String, Object>>() {
                     };
 
-            RequestEntity<Void> request = RequestEntity.get(new URI(restApiUrl + "/documents?docText=*"))
+            RequestEntity<Void> request = RequestEntity.get(new URI(annotatorUI.getHostURL() + "/documents?docText=*"))
                     .accept(MediaType.APPLICATION_JSON).build();
 
             ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
 
             Map<String, Object> jsonDict = response.getBody();
 
-            documents = ((List<Map>) jsonDict.get("data"));
+            documents = ((List<Map<String, Object>>) jsonDict.get("data"));
+
+            Collections.sort(documents, Tools.documentComparator);
 
             DefaultListModel<String> docsModel = new DefaultListModel<>();
             for (Map document : documents) {
@@ -68,24 +81,61 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
                 }
             }
 
-
-            list1 = new JList<>(docsModel);
+            list1.setModel(docsModel);
             list1.setSelectionMode(ListSelectionModel.SINGLE_INTERVAL_SELECTION);
             list1.setLayoutOrientation(JList.HORIZONTAL_WRAP);
             list1.setVisibleRowCount(-1);
             list1.addListSelectionListener(this);
 
-            scrollPane1 = new JScrollPane(list1);
+            loadURLButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent actionEvent) {
+                    loadURLActionListener(actionEvent);
+                }
+            });
 
             scrollPane1.setPreferredSize(new Dimension(400, 200));
 
-            panel1.add(scrollPane1);
-
         } catch (URISyntaxException e) {
-            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, e.getMessage());
+        } catch (ResourceAccessException e) {
+            JOptionPane.showMessageDialog(null, e.getMessage());
         }
     }
 
+    public void loadURLActionListener(ActionEvent evt) {
+        try {
+            textField1.setBackground(new Color(Color.WHITE.getRGB()));
+            String urlString = textField1.getText();
+            URL url = new URL(urlString);
+
+            ParameterizedTypeReference<HashMap<String, Object>> responseType =
+                    new ParameterizedTypeReference<HashMap<String, Object>>() {
+                    };
+
+//            Map<String, String> urlData = new HashMap<>();
+//            urlData.put("url", url.toString());
+
+            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+            body.add("url", url.toString());
+
+            RequestEntity<MultiValueMap<String, Object>> request = RequestEntity.post(new URI(annotatorUI.getHostURL() + "/documents/url"))
+                    .accept(MediaType.APPLICATION_JSON)
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(body);
+
+            ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
+
+            Map<String, Object> doc = response.getBody();
+
+            annotatorUI.loadDocument(doc);
+            setVisible(false);
+        } catch (MalformedURLException e) {
+            textField1.setBackground(new Color(Color.RED.getRGB()));
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, e.getMessage());
+        }
+    }
 
     @Override
     public void valueChanged(ListSelectionEvent listSelectionEvent) {
@@ -111,13 +161,24 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
      */
     private void $$$setupUI$$$() {
         panel1 = new JPanel();
-        panel1.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        panel1.setLayout(new GridLayoutManager(3, 4, new Insets(0, 0, 0, 0), -1, -1));
         scrollPane1 = new JScrollPane();
         scrollPane1.setHorizontalScrollBarPolicy(30);
-        panel1.add(scrollPane1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(600, 300), new Dimension(600, 300), null, 0, false));
+        panel1.add(scrollPane1, new GridConstraints(2, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(400, 200), new Dimension(400, 200), null, 0, false));
         list1 = new JList();
         list1.setLayoutOrientation(0);
         scrollPane1.setViewportView(list1);
+        final JLabel label1 = new JLabel();
+        label1.setText("Load From URL:");
+        panel1.add(label1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        textField1 = new JTextField();
+        panel1.add(textField1, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        loadURLButton = new JButton();
+        loadURLButton.setText("Load URL");
+        panel1.add(loadURLButton, new GridConstraints(0, 2, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label2 = new JLabel();
+        label2.setText("OR Select a Document From the List Below:");
+        panel1.add(label2, new GridConstraints(1, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     }
 
     /**
