@@ -3,21 +3,26 @@ package nlpannotator;
 import com.google.common.base.Strings;
 import common.Tools;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.FileUrlResource;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.*;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.ResourceAccessException;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.*;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -260,6 +265,8 @@ public class Main extends javax.swing.JFrame {
         find = new javax.swing.JButton();
         save = new javax.swing.JButton();
         process = new javax.swing.JButton();
+        download = new javax.swing.JButton();
+        delete = new javax.swing.JButton();
         fileName = new javax.swing.JLabel();
         hostLabel = new JLabel();
         host = new JTextField();
@@ -366,6 +373,20 @@ public class Main extends javax.swing.JFrame {
             }
         });
 
+        download.setText("Download Document");
+        download.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                downloadActionPerformed(evt);
+            }
+        });
+
+        delete.setText("Delete Document");
+        delete.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                deleteActionPerformed(evt);
+            }
+        });
+
         type.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
@@ -413,6 +434,10 @@ public class Main extends javax.swing.JFrame {
                     .addComponent(save)
                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 5, Short.MAX_VALUE)
                     .addComponent(process)
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 5, Short.MAX_VALUE)
+                    .addComponent(download)
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 5, Short.MAX_VALUE)
+                    .addComponent(delete)
                     .addGap(29, 29, 29))
         );
         layout.setVerticalGroup(
@@ -437,6 +462,8 @@ public class Main extends javax.swing.JFrame {
                             .addComponent(find)
                             .addComponent(save)
                             .addComponent(process)
+                            .addComponent(download)
+                            .addComponent(delete)
                             .addComponent(fileName, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addComponent(status, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -465,7 +492,7 @@ public class Main extends javax.swing.JFrame {
                     String selectedText = doc.getText(start, end - start);
                     findAndReplace.findHighlighted(selectedText);
                 } catch (BadLocationException e) {
-                    JOptionPane.showMessageDialog(null, e.getMessage());
+                    JOptionPane.showMessageDialog(this, e.getMessage());
                 }
             }
         }
@@ -497,11 +524,11 @@ public class Main extends javax.swing.JFrame {
                     status.setText("SERVER ERROR!!!");
                 }
             } catch (URISyntaxException e) {
-                JOptionPane.showMessageDialog(null, e.getMessage());
+                JOptionPane.showMessageDialog(this, e.getMessage());
             } catch (ResourceAccessException e) {
-                JOptionPane.showMessageDialog(null, e.getMessage());
+                JOptionPane.showMessageDialog(this, e.getMessage());
             } catch (HttpServerErrorException e) {
-                JOptionPane.showMessageDialog(null, e.getResponseBodyAsString());
+                JOptionPane.showMessageDialog(this, e.getResponseBodyAsString());
             }
         }
     }
@@ -519,17 +546,17 @@ public class Main extends javax.swing.JFrame {
 
             if (response.getStatusCode() == HttpStatus.OK) {
                 double accuracy = (double)response.getBody().get("data");
-                JOptionPane.showMessageDialog(null, "Model accuracy: " + accuracy);
+                JOptionPane.showMessageDialog(this, "Model accuracy: " + accuracy);
                 status.setText("DocCat Model Training Completed");
             } else {
                 status.setText("SERVER ERROR!!!");
             }
         } catch (URISyntaxException e) {
-            JOptionPane.showMessageDialog(null, e.getMessage());
+            JOptionPane.showMessageDialog(this, e.getMessage());
         } catch (ResourceAccessException e) {
-            JOptionPane.showMessageDialog(null, e.getMessage());
+            JOptionPane.showMessageDialog(this, e.getMessage());
         } catch (HttpServerErrorException e) {
-            JOptionPane.showMessageDialog(null, e.getResponseBodyAsString());
+            JOptionPane.showMessageDialog(this, e.getResponseBodyAsString());
         }
     }
 
@@ -564,9 +591,9 @@ public class Main extends javax.swing.JFrame {
                 playground.setCaretPosition(0);
                 highlightAnnotations();
             } catch (URISyntaxException e) {
-                JOptionPane.showMessageDialog(null, e.getMessage());
+                JOptionPane.showMessageDialog(this, e.getMessage());
             } catch (ResourceAccessException e) {
-                JOptionPane.showMessageDialog(null, e.getMessage());
+                JOptionPane.showMessageDialog(this, e.getMessage());
             }
         } else {
             status.setText("Please load a document...");
@@ -581,7 +608,7 @@ public class Main extends javax.swing.JFrame {
         status.setText(text);
     }
 
-    private void loadActionPerformed(java.awt.event.ActionEvent evt) {
+    public void loadActionPerformed(java.awt.event.ActionEvent evt) {
         DocumentSelector documentSelector = new DocumentSelector(this);
     }
 
@@ -662,9 +689,82 @@ public class Main extends javax.swing.JFrame {
                 }
 
             } catch (URISyntaxException e) {
-                JOptionPane.showMessageDialog(null, e.getMessage());
+                JOptionPane.showMessageDialog(this, e.getMessage());
             } catch (ResourceAccessException e) {
-                JOptionPane.showMessageDialog(null, e.getMessage());
+                JOptionPane.showMessageDialog(this, e.getMessage());
+            }
+        } else {
+            status.setText("Please load a document...");
+        }
+    }
+
+    private void downloadActionPerformed(ActionEvent evt) {
+        if (document != null) {
+            try {
+                String filename = document.get("filename").toString();
+                final Path path = getSavePath(filename);
+
+                if (path != null) {
+                    RequestCallback requestCallback = request -> request.getHeaders()
+                            .setAccept(Arrays.asList(MediaType.APPLICATION_OCTET_STREAM, MediaType.ALL));
+
+                    ResponseExtractor<Void> responseExtractor = response -> {
+                        Files.copy(response.getBody(), path);
+                        return null;
+                    };
+
+                    restTemplate.execute(new URI(getHostURL() + "/documents/" + document.get("docStoreId").toString()), HttpMethod.GET, requestCallback, responseExtractor);
+                }
+            } catch (URISyntaxException e) {
+                JOptionPane.showMessageDialog(this, e.getMessage());
+            } catch (ResourceAccessException e) {
+                JOptionPane.showMessageDialog(this, e.getMessage());
+            }
+        } else {
+            status.setText("Please load a document...");
+        }
+    }
+
+    private Path getSavePath(String filename) {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setCurrentDirectory(new java.io.File("."));
+        chooser.setDialogTitle("Choose Save Location");
+        chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        chooser.setAcceptAllFileFilterUsed(false);
+
+        if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+            String path = chooser.getSelectedFile().getPath() + filename;
+            return new File(path).toPath();
+        }
+        else {
+            return null;
+        }
+    }
+
+    private void deleteActionPerformed(ActionEvent evt) {
+        if (document != null && JOptionPane.showConfirmDialog(this, "Are you sure?") == 0) {
+            try {
+                ParameterizedTypeReference<HashMap<String, Object>> responseType =
+                        new ParameterizedTypeReference<HashMap<String, Object>>() {};
+
+                RequestEntity<Void> request = RequestEntity.delete(new URI(getHostURL() + "/documents/" + document.get("id").toString()))
+                        .accept(MediaType.APPLICATION_JSON).build();
+
+                ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
+
+                if (response.getStatusCode() == HttpStatus.NO_CONTENT) {
+                    status.setText("Document Deleted");
+                    fileName.setText("");
+                    document = null;
+                    playground.setText("");
+                } else {
+                    JOptionPane.showMessageDialog(this, "Failed to delete document! Reason: " + response.getStatusCode());
+                }
+
+            } catch (URISyntaxException e) {
+                JOptionPane.showMessageDialog(this, e.getMessage());
+            } catch (ResourceAccessException e) {
+                JOptionPane.showMessageDialog(this, e.getMessage());
             }
         } else {
             status.setText("Please load a document...");
@@ -749,6 +849,8 @@ public class Main extends javax.swing.JFrame {
     private javax.swing.JLabel status;
     private javax.swing.JButton save;
     private javax.swing.JButton process;
+    private javax.swing.JButton download;
+    private javax.swing.JButton delete;
     private JSlider slider;
     private JComboBox type;
     private JComboBox doccat;

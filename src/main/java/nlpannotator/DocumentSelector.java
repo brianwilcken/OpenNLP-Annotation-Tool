@@ -4,13 +4,14 @@ import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import common.Tools;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.MediaType;
-import org.springframework.http.RequestEntity;
-import org.springframework.http.ResponseEntity;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.http.*;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.Resource;
@@ -20,6 +21,8 @@ import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.FileInputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -36,6 +39,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
     private JButton loadURLButton;
     private List<Map<String, Object>> documents;
     private Main annotatorUI;
+    private FileDrop fileDrop;
 
     public DocumentSelector(Main annotatorUI) {
         this.annotatorUI = annotatorUI;
@@ -77,6 +81,11 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
             for (Map document : documents) {
                 if (document.containsKey("docText")) {
                     String displayText = document.get("filename").toString() + " (" + document.get("category").toString() + ")";
+                    long created = Long.parseLong(document.get("created").toString());
+                    long lastUpdated = Long.parseLong(document.get("lastUpdated").toString());
+                    if (created == lastUpdated) {
+                        displayText = "*" + displayText;
+                    }
                     docsModel.addElement(displayText);
                 }
             }
@@ -86,6 +95,13 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
             list1.setLayoutOrientation(JList.HORIZONTAL_WRAP);
             list1.setVisibleRowCount(-1);
             list1.addListSelectionListener(this);
+
+            fileDrop = new FileDrop(list1, new FileDrop.Listener() {
+                @Override
+                public void filesDropped(File[] files) {
+                    uploadFiles(files);
+                }
+            });
 
             loadURLButton.addActionListener(new ActionListener() {
                 @Override
@@ -97,10 +113,49 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
             scrollPane1.setPreferredSize(new Dimension(400, 200));
 
         } catch (URISyntaxException e) {
-            JOptionPane.showMessageDialog(null, e.getMessage());
+            JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
         } catch (ResourceAccessException e) {
-            JOptionPane.showMessageDialog(null, e.getMessage());
+            JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
         }
+    }
+
+    private void uploadFiles(File[] files) {
+        try {
+            for (int i = 0; i < files.length; i++) {
+                Map<String, String> metadata = new HashMap<>();
+                MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+                body.add("metadata", metadata);
+                body.add("file", new FileSystemResource(files[i]));
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+                ParameterizedTypeReference<HashMap<String, Object>> responseType =
+                        new ParameterizedTypeReference<HashMap<String, Object>>() {
+                        };
+
+                HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(body, headers);
+
+//                RequestEntity<Map> request = RequestEntity.post(new URI(annotatorUI.getHostURL() + "/documents"))
+//                        .accept(MediaType.APPLICATION_JSON)
+//                        .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA_VALUE)
+//                        .body(body);
+
+                ResponseEntity<HashMap<String, Object>> response = null;
+                try {
+                    response = restTemplate.exchange(annotatorUI.getHostURL() + "/documents", HttpMethod.POST, request, responseType);
+                } catch (HttpClientErrorException e) {
+                    JOptionPane.showMessageDialog(annotatorUI, "Failed to upload file: (" + files[i].getName() + ") Reason: " + e.getMessage());
+                }
+
+                if (response.getStatusCode() != HttpStatus.OK) {
+                    JOptionPane.showMessageDialog(annotatorUI, "Failed to upload file: (" + files[i].getName() + ") Reason: " + response.getStatusCode());
+                }
+            }
+        } catch (ResourceAccessException e) {
+            JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
+        }
+        setVisible(false);
+        annotatorUI.loadActionPerformed(null);
     }
 
     public void loadURLActionListener(ActionEvent evt) {
@@ -133,7 +188,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
         } catch (MalformedURLException e) {
             textField1.setBackground(new Color(Color.RED.getRGB()));
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(null, e.getMessage());
+            JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
         }
     }
 
@@ -164,7 +219,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
         panel1.setLayout(new GridLayoutManager(3, 4, new Insets(0, 0, 0, 0), -1, -1));
         scrollPane1 = new JScrollPane();
         scrollPane1.setHorizontalScrollBarPolicy(30);
-        panel1.add(scrollPane1, new GridConstraints(2, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(400, 200), new Dimension(400, 200), null, 0, false));
+        panel1.add(scrollPane1, new GridConstraints(2, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(800, 600), new Dimension(800, 600), null, 0, false));
         list1 = new JList();
         list1.setLayoutOrientation(0);
         scrollPane1.setViewportView(list1);

@@ -6,6 +6,8 @@ import com.intellij.uiDesigner.core.GridLayoutManager;
 import common.Tools;
 import dictionary.Dictionary;
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.WordUtils;
 
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
@@ -161,6 +163,9 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
             List<String> dict = dictionaries.get(category);
             for (String entry : dict) {
                 addFoundElement(entry);
+                //title caps version
+                String titleCaps = WordUtils.capitalizeFully(entry);
+                addFoundElement(titleCaps);
             }
         }
     }
