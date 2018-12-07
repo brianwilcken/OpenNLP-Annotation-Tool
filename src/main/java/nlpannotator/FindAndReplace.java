@@ -166,6 +166,8 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
                 //title caps version
                 String titleCaps = WordUtils.capitalizeFully(entry);
                 addFoundElement(titleCaps);
+                //all caps
+                addFoundElement(entry.toUpperCase());
             }
         }
     }

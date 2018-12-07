@@ -181,10 +181,8 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
 
             ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
 
-            Map<String, Object> doc = response.getBody();
-
-            annotatorUI.loadDocument(doc);
             setVisible(false);
+            annotatorUI.loadActionPerformed(null);
         } catch (MalformedURLException e) {
             textField1.setBackground(new Color(Color.RED.getRGB()));
         } catch (Exception e) {
