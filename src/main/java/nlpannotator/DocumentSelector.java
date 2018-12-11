@@ -66,7 +66,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
                     new ParameterizedTypeReference<HashMap<String, Object>>() {
                     };
 
-            RequestEntity<Void> request = RequestEntity.get(new URI(annotatorUI.getHostURL() + "/documents?docText=*"))
+            RequestEntity<Void> request = RequestEntity.get(new URI(annotatorUI.getHostURL() + "/documents?docText=*&fields=id&fields=filename&fields=category&fields=created&fields=lastUpdated"))
                     .accept(MediaType.APPLICATION_JSON).build();
 
             ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
@@ -79,15 +79,13 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
 
             DefaultListModel<String> docsModel = new DefaultListModel<>();
             for (Map document : documents) {
-                if (document.containsKey("docText")) {
-                    String displayText = document.get("filename").toString() + " (" + document.get("category").toString() + ")";
-                    long created = Long.parseLong(document.get("created").toString());
-                    long lastUpdated = Long.parseLong(document.get("lastUpdated").toString());
-                    if (created == lastUpdated) {
-                        displayText = "*" + displayText;
-                    }
-                    docsModel.addElement(displayText);
+                String displayText = document.get("filename").toString() + " (" + document.get("category").toString() + ")";
+                long created = Long.parseLong(document.get("created").toString());
+                long lastUpdated = Long.parseLong(document.get("lastUpdated").toString());
+                if (created == lastUpdated) {
+                    displayText = "*" + displayText;
                 }
+                docsModel.addElement(displayText);
             }
 
             list1.setModel(docsModel);
@@ -192,10 +190,29 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
 
     @Override
     public void valueChanged(ListSelectionEvent listSelectionEvent) {
-        int index = listSelectionEvent.getFirstIndex();
-        Map doc = documents.get(index);
-        annotatorUI.loadDocument(doc);
-        setVisible(false);
+        try {
+            int index = listSelectionEvent.getFirstIndex();
+            Map doc = documents.get(index);
+            String id = doc.get("id").toString();
+
+            ParameterizedTypeReference<HashMap<String, Object>> responseType =
+                    new ParameterizedTypeReference<HashMap<String, Object>>() {
+                    };
+
+            RequestEntity<Void> request = RequestEntity.get(new URI(annotatorUI.getHostURL() + "/documents?id=" + id))
+                    .accept(MediaType.APPLICATION_JSON).build();
+
+            ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
+
+            Map<String, Object> jsonDict = response.getBody();
+
+            List<Map<String, Object>> document = ((List<Map<String, Object>>) jsonDict.get("data"));
+
+            annotatorUI.loadDocument(document.get(0));
+            setVisible(false);
+        } catch (URISyntaxException e) {
+            JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
+        }
     }
 
     {

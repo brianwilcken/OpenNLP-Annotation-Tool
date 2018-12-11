@@ -642,8 +642,31 @@ public class Main extends javax.swing.JFrame {
         return doccat.getSelectedItem().toString();
     }
 
+    private boolean validateForSave() {
+        Pattern duplicateTags = Pattern.compile("(?<!(<END))>\\s*?<START:.+?>");
+        boolean isValid = true;
+
+        String text = playground.getText();
+        Matcher duplicateMatcher = duplicateTags.matcher(text);
+        while(duplicateMatcher.find()) {
+            String duplicateTag = text.substring(duplicateMatcher.start(), duplicateMatcher.end());
+            highlightText(duplicateTag, true, Color.RED, Color.black);
+            isValid = false;
+        }
+
+        if (isValid) {
+            removeHighlights();
+            highlightAnnotations();
+            highlightFound();
+        } else {
+            JOptionPane.showMessageDialog(this, "Please resolve all duplicate annotation tags before saving.");
+        }
+
+        return isValid;
+    }
+
     private void saveActionPerformed(java.awt.event.ActionEvent evt, boolean doNLP) {
-        if (document != null) {
+        if (document != null && validateForSave()) {
             if (document.containsKey("annotated")) {
                 document.replace("annotated", playground.getText());
             } else {
@@ -733,7 +756,7 @@ public class Main extends javax.swing.JFrame {
         chooser.setAcceptAllFileFilterUsed(false);
 
         if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-            String path = chooser.getSelectedFile().getPath() + filename;
+            String path = chooser.getSelectedFile().getPath() + "/" + filename;
             return new File(path).toPath();
         }
         else {
