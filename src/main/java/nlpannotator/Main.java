@@ -23,6 +23,7 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
 import java.util.*;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -38,9 +39,10 @@ public class Main extends javax.swing.JFrame {
     ArrayList<Offset> coordinates;
     Map document;
     private RestTemplate restTemplate;
+    private ProcessMonitor processMonitor;
 
     public Main() {
-
+        processMonitor = new ProcessMonitor(this);
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         restTemplate = new RestTemplate(requestFactory);
         initComponents();
@@ -160,6 +162,10 @@ public class Main extends javax.swing.JFrame {
         public void keyReleased(KeyEvent e) {
 
         }
+    }
+
+    public ProcessMonitor getProcesMonitor() {
+        return processMonitor;
     }
 
     private String getAnnotation() {
@@ -466,8 +472,9 @@ public class Main extends javax.swing.JFrame {
                             .addComponent(delete)
                             .addComponent(fileName, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addComponent(status, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 480, Short.MAX_VALUE))
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 480, Short.MAX_VALUE)
+            )
         );
 
         pack();
@@ -508,18 +515,57 @@ public class Main extends javax.swing.JFrame {
 
     private void trainNERModelActionPerformed(ActionEvent evt) {
         if (document != null) {
+            new Thread(() -> {
+                try {
+                    ParameterizedTypeReference<HashMap<String, Object>> responseType =
+                            new ParameterizedTypeReference<HashMap<String, Object>>() {
+                            };
+
+                    RequestEntity<Void> request = RequestEntity.get(new URI(getHostURL() + "/documents/trainNER" + "?category=" + document.get("category").toString() + "&doAsync=false"))
+                            .accept(MediaType.APPLICATION_JSON).build();
+
+                    ProcessMonitor procMon = getProcesMonitor();
+                    procMon.setVisible(true);
+                    String procId = procMon.addProcess("(" + Instant.now() + ") Training NER Model");
+                    ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
+                    procMon.removeProcess(procId);
+
+                    if (response.getStatusCode() == HttpStatus.OK) {
+                        status.setText("NER Model Training Completed");
+                    } else {
+                        status.setText("SERVER ERROR!!!");
+                    }
+                } catch (URISyntaxException e) {
+                    JOptionPane.showMessageDialog(this, e.getMessage());
+                } catch (ResourceAccessException e) {
+                    JOptionPane.showMessageDialog(this, e.getMessage());
+                } catch (HttpServerErrorException e) {
+                    JOptionPane.showMessageDialog(this, e.getResponseBodyAsString());
+                }
+            }).start();
+        }
+    }
+
+    private void trainDoccatModelActionPerformed(ActionEvent evt) {
+        new Thread(() -> {
             try {
                 ParameterizedTypeReference<HashMap<String, Object>> responseType =
                         new ParameterizedTypeReference<HashMap<String, Object>>() {
                         };
 
-                RequestEntity<Void> request = RequestEntity.get(new URI(getHostURL() + "/documents/trainNER" + "?category=" + document.get("category").toString() + "&doAsync=false"))
+                RequestEntity<Void> request = RequestEntity.get(new URI(getHostURL() + "/documents/trainDoccat?doAsync=false"))
                         .accept(MediaType.APPLICATION_JSON).build();
 
+                ProcessMonitor procMon = getProcesMonitor();
+                procMon.setVisible(true);
+                String procId = procMon.addProcess("(" + Instant.now() + ") Training Doccat Model");
                 ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
+                procMon.removeProcess(procId);
 
                 if (response.getStatusCode() == HttpStatus.OK) {
-                    status.setText("NER Model Training Completed");
+                    double accuracy = (double)response.getBody().get("data");
+                    JOptionPane.showMessageDialog(this, "Model accuracy: " + accuracy);
+                    status.setText("DocCat Model Training Completed");
                 } else {
                     status.setText("SERVER ERROR!!!");
                 }
@@ -530,34 +576,8 @@ public class Main extends javax.swing.JFrame {
             } catch (HttpServerErrorException e) {
                 JOptionPane.showMessageDialog(this, e.getResponseBodyAsString());
             }
-        }
-    }
+        }).start();
 
-    private void trainDoccatModelActionPerformed(ActionEvent evt) {
-        try {
-            ParameterizedTypeReference<HashMap<String, Object>> responseType =
-                    new ParameterizedTypeReference<HashMap<String, Object>>() {
-                    };
-
-            RequestEntity<Void> request = RequestEntity.get(new URI(getHostURL() + "/documents/trainDoccat?doAsync=false"))
-                    .accept(MediaType.APPLICATION_JSON).build();
-
-            ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
-
-            if (response.getStatusCode() == HttpStatus.OK) {
-                double accuracy = (double)response.getBody().get("data");
-                JOptionPane.showMessageDialog(this, "Model accuracy: " + accuracy);
-                status.setText("DocCat Model Training Completed");
-            } else {
-                status.setText("SERVER ERROR!!!");
-            }
-        } catch (URISyntaxException e) {
-            JOptionPane.showMessageDialog(this, e.getMessage());
-        } catch (ResourceAccessException e) {
-            JOptionPane.showMessageDialog(this, e.getMessage());
-        } catch (HttpServerErrorException e) {
-            JOptionPane.showMessageDialog(this, e.getResponseBodyAsString());
-        }
     }
 
     private void resetActionPerformed(ActionEvent evt) {
@@ -667,55 +687,61 @@ public class Main extends javax.swing.JFrame {
 
     private void saveActionPerformed(java.awt.event.ActionEvent evt, boolean doNLP) {
         if (document != null && validateForSave()) {
-            if (document.containsKey("annotated")) {
-                document.replace("annotated", playground.getText());
-            } else {
-                document.put("annotated", playground.getText());
-            }
-
-            document.replace("category", doccat.getSelectedItem().toString());
-
-            try {
-                Map<String, String> doc = new HashMap<>();
-                for (Object key : document.keySet()) {
-                    String docKey = key.toString();
-                    Object value = document.get(key);
-                    if (value instanceof java.util.List) {
-                        doc.put(docKey, ((java.util.List) value).get(0).toString());
-                    } else {
-                        doc.put(docKey, value.toString());
-                    }
-                }
-
-                MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-                body.add("metadata", doc);
-                body.add("doNLP", doNLP);
-
-                ParameterizedTypeReference<HashMap<String, Object>> responseType =
-                        new ParameterizedTypeReference<HashMap<String, Object>>() {};
-
-                RequestEntity<Map> request = RequestEntity.put(new URI(getHostURL() + "/documents/metadata/" + document.get("id").toString()))
-                        .accept(MediaType.APPLICATION_JSON)
-                        .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA_VALUE)
-                        .body(body);
-
-                ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
-
-                if (response.getStatusCode() == HttpStatus.OK) {
-                    if (doNLP) {
-                        status.setText("Document Processing Complete");
-                    } else {
-                        status.setText("Save Successful");
-                    }
+            new Thread(() -> {
+                if (document.containsKey("annotated")) {
+                    document.replace("annotated", playground.getText());
                 } else {
-                    status.setText("SAVE FAILURE!!!");
+                    document.put("annotated", playground.getText());
                 }
 
-            } catch (URISyntaxException e) {
-                JOptionPane.showMessageDialog(this, e.getMessage());
-            } catch (ResourceAccessException e) {
-                JOptionPane.showMessageDialog(this, e.getMessage());
-            }
+                document.replace("category", doccat.getSelectedItem().toString());
+
+                try {
+                    Map<String, String> doc = new HashMap<>();
+                    for (Object key : document.keySet()) {
+                        String docKey = key.toString();
+                        Object value = document.get(key);
+                        if (value instanceof java.util.List) {
+                            doc.put(docKey, ((java.util.List) value).get(0).toString());
+                        } else {
+                            doc.put(docKey, value.toString());
+                        }
+                    }
+
+                    MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+                    body.add("metadata", doc);
+                    body.add("doNLP", doNLP);
+
+                    ParameterizedTypeReference<HashMap<String, Object>> responseType =
+                            new ParameterizedTypeReference<HashMap<String, Object>>() {};
+
+                    RequestEntity<Map> request = RequestEntity.put(new URI(getHostURL() + "/documents/metadata/" + document.get("id").toString()))
+                            .accept(MediaType.APPLICATION_JSON)
+                            .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA_VALUE)
+                            .body(body);
+
+                    ProcessMonitor procMon = getProcesMonitor();
+                    procMon.setVisible(true);
+                    String procId = procMon.addProcess("(" + Instant.now() + ") Processing Document: " + document.get("filename").toString());
+                    ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
+                    procMon.removeProcess(procId);
+
+                    if (response.getStatusCode() == HttpStatus.OK) {
+                        if (doNLP) {
+                            status.setText("Document Processing Complete");
+                        } else {
+                            status.setText("Save Successful");
+                        }
+                    } else {
+                        status.setText("SAVE FAILURE!!!");
+                    }
+
+                } catch (URISyntaxException e) {
+                    JOptionPane.showMessageDialog(this, e.getMessage());
+                } catch (ResourceAccessException e) {
+                    JOptionPane.showMessageDialog(this, e.getMessage());
+                }
+            }).start();
         } else {
             status.setText("Please load a document...");
         }
