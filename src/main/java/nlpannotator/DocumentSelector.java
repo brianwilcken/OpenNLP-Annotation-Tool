@@ -11,10 +11,8 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResourceAccessException;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import javax.annotation.Resource;
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
@@ -22,7 +20,6 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
-import java.io.FileInputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -127,71 +124,80 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
     }
 
     private void uploadFiles(File[] files) {
-        try {
-            for (int i = 0; i < files.length; i++) {
-                Map<String, String> metadata = new HashMap<>();
-                MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-                body.add("metadata", metadata);
-                body.add("file", new FileSystemResource(files[i]));
-                HttpHeaders headers = new HttpHeaders();
-                headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        ProcessMonitor procMon = annotatorUI.getProcessMonitor();
+        procMon.setVisible(true);
+        String procId = procMon.addProcess("(" + Instant.now() + ") Uploading Files");
+        new Thread(() -> {
+            try {
+                for (int i = 0; i < files.length; i++) {
+                    Map<String, String> metadata = new HashMap<>();
+                    MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+                    body.add("metadata", metadata);
+                    body.add("file", new FileSystemResource(files[i]));
+                    HttpHeaders headers = new HttpHeaders();
+                    headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+                    ParameterizedTypeReference<HashMap<String, Object>> responseType =
+                            new ParameterizedTypeReference<HashMap<String, Object>>() {
+                            };
+
+                    HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(body, headers);
+
+                    ResponseEntity<HashMap<String, Object>> response = null;
+                    try {
+                        response = restTemplate.exchange(annotatorUI.getHostURL() + "/documents", HttpMethod.POST, request, responseType);
+                    } catch (HttpClientErrorException e) {
+                        JOptionPane.showMessageDialog(annotatorUI, "Failed to upload file: (" + files[i].getName() + ") Reason: " + e.getMessage());
+                    }
+
+                    if (response.getStatusCode() != HttpStatus.OK) {
+                        JOptionPane.showMessageDialog(annotatorUI, "Failed to upload file: (" + files[i].getName() + ") Reason: " + response.getStatusCode());
+                    }
+                }
+            } catch (ResourceAccessException e) {
+                JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
+            } finally {
+                procMon.removeProcess(procId);
+            }
+            setVisible(false);
+            annotatorUI.loadActionPerformed(null);
+        }).start();
+    }
+
+    public void loadURLActionListener(ActionEvent evt) {
+        textField1.setBackground(new Color(Color.WHITE.getRGB()));
+        String urlString = textField1.getText();
+        ProcessMonitor procMon = annotatorUI.getProcessMonitor();
+        procMon.setVisible(true);
+        String procId = procMon.addProcess("(" + Instant.now() + ") Loading URL: " + urlString);
+        new Thread(() -> {
+            try {
+                URL url = new URL(urlString);
 
                 ParameterizedTypeReference<HashMap<String, Object>> responseType =
                         new ParameterizedTypeReference<HashMap<String, Object>>() {
                         };
 
-                HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(body, headers);
+                MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+                body.add("url", url.toString());
 
-//                RequestEntity<Map> request = RequestEntity.post(new URI(annotatorUI.getHostURL() + "/documents"))
-//                        .accept(MediaType.APPLICATION_JSON)
-//                        .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA_VALUE)
-//                        .body(body);
+                RequestEntity<MultiValueMap<String, Object>> request = RequestEntity.post(new URI(annotatorUI.getHostURL() + "/documents/url"))
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .body(body);
 
-                ResponseEntity<HashMap<String, Object>> response = null;
-                try {
-                    response = restTemplate.exchange(annotatorUI.getHostURL() + "/documents", HttpMethod.POST, request, responseType);
-                } catch (HttpClientErrorException e) {
-                    JOptionPane.showMessageDialog(annotatorUI, "Failed to upload file: (" + files[i].getName() + ") Reason: " + e.getMessage());
-                }
+                ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
 
-                if (response.getStatusCode() != HttpStatus.OK) {
-                    JOptionPane.showMessageDialog(annotatorUI, "Failed to upload file: (" + files[i].getName() + ") Reason: " + response.getStatusCode());
-                }
+                setVisible(false);
+                annotatorUI.loadActionPerformed(null);
+            } catch (MalformedURLException e) {
+                textField1.setBackground(new Color(Color.RED.getRGB()));
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
+            } finally {
+                procMon.removeProcess(procId);
             }
-        } catch (ResourceAccessException e) {
-            JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
-        }
-        setVisible(false);
-        annotatorUI.loadActionPerformed(null);
-    }
-
-    public void loadURLActionListener(ActionEvent evt) {
-        try {
-            textField1.setBackground(new Color(Color.WHITE.getRGB()));
-            String urlString = textField1.getText();
-            URL url = new URL(urlString);
-
-            ParameterizedTypeReference<HashMap<String, Object>> responseType =
-                    new ParameterizedTypeReference<HashMap<String, Object>>() {
-                    };
-
-            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-            body.add("url", url.toString());
-
-            RequestEntity<MultiValueMap<String, Object>> request = RequestEntity.post(new URI(annotatorUI.getHostURL() + "/documents/url"))
-                    .accept(MediaType.APPLICATION_JSON)
-                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                    .body(body);
-
-            ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
-
-            setVisible(false);
-            annotatorUI.loadActionPerformed(null);
-        } catch (MalformedURLException e) {
-            textField1.setBackground(new Color(Color.RED.getRGB()));
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
-        }
+        }).start();
     }
 
     public void crawlURLActionListener(ActionEvent evt) {
@@ -272,6 +278,9 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
 
         @Override
         public void run() {
+            ProcessMonitor procMon = annotatorUI.getProcessMonitor();
+            procMon.setVisible(true);
+            String procId = procMon.addProcess("(" + Instant.now() + ") Crawling URL: " + url);
             try {
                 ParameterizedTypeReference<HashMap<String, Object>> responseType =
                         new ParameterizedTypeReference<HashMap<String, Object>>() {
@@ -285,13 +294,11 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .body(body);
 
-                ProcessMonitor procMon = annotatorUI.getProcesMonitor();
-                procMon.setVisible(true);
-                String procId = procMon.addProcess("(" + Instant.now() + ") Crawling URL: " + url);
                 ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
-                procMon.removeProcess(procId);
             } catch (URISyntaxException e) {
                 JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
+            } finally {
+                procMon.removeProcess(procId);
             }
         }
     }

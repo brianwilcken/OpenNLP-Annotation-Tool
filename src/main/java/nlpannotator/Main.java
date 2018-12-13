@@ -1,11 +1,8 @@
 package nlpannotator;
 
-import com.google.common.base.Strings;
+import common.SizedStack;
 import common.Tools;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.FileUrlResource;
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.*;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.util.LinkedMultiValueMap;
@@ -22,7 +19,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.*;
 import java.util.List;
@@ -41,11 +37,110 @@ public class Main extends javax.swing.JFrame {
     private RestTemplate restTemplate;
     private ProcessMonitor processMonitor;
 
+    private SizedStack<String> undoStates;
+    private SizedStack<String> redoStates;
+
     public Main() {
+        undoStates = new SizedStack<>(10);
+        redoStates = new SizedStack<>(10);
         processMonitor = new ProcessMonitor(this);
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         restTemplate = new RestTemplate(requestFactory);
         initComponents();
+    }
+
+    private void annotateSingle(Highlight[] highlights) {
+        for (Highlight highlight : highlights) {
+            Document doc = playground.getDocument();
+            int start = highlight.getStartOffset();
+            int end = highlight.getEndOffset();
+
+            String annotation = getAnnotation();
+            try {
+                doc.insertString(start, annotation, null);
+                doc.insertString(end + annotation.length(), " <END> ", null);
+            } catch (BadLocationException e1) {
+                e1.printStackTrace();
+            }
+        }
+        removeHighlights();
+        highlightAnnotations();
+        highlightFound();
+    }
+
+    private void annotateMultiple(Highlight[] highlights) {
+        for (Highlight highlight : highlights) {
+            Document doc = playground.getDocument();
+            int start = highlight.getStartOffset();
+            int end = highlight.getEndOffset();
+
+            String annotation = getAnnotation();
+            try {
+                int caretPos = playground.getCaretPosition();
+                String selectedText = doc.getText(start, end - start);
+                String annotated = doc.getText(0, doc.getLength()).replaceAll(selectedText, annotation + selectedText + " <END> ");
+                doc.remove(0, doc.getLength());
+                doc.insertString(0, annotated, null);
+                playground.setCaretPosition(caretPos);
+            } catch (BadLocationException e1) {
+                e1.printStackTrace();
+            }
+        }
+        removeHighlights();
+        highlightAnnotations();
+        highlightFound();
+    }
+
+    private void unannotateSingle(Highlight[] highlights) {
+        for (Highlight highlight : highlights) {
+            Document doc = playground.getDocument();
+            int start = highlight.getStartOffset();
+            int end = highlight.getEndOffset();
+
+            String annotationType = getAnnotationType();
+            Pattern annotationPattern = Pattern.compile(" ?<START:" + annotationType + ">.+?<END> ?");
+            try {
+                String highlighted = doc.getText(start, (end - start));
+                Matcher annotationMatcher = annotationPattern.matcher(highlighted);
+                if (annotationMatcher.find()) {
+                    highlighted = highlighted.replaceAll(" ?<START:" + annotationType + "> ", "");
+                    highlighted = highlighted.replaceAll(" <END> ?", "");
+                    doc.remove(start, (end - start));
+                    doc.insertString(start, highlighted, null);
+                }
+            } catch (BadLocationException e1) {
+                e1.printStackTrace();
+            }
+        }
+    }
+
+    private void unannotateMultiple(Highlight[] highlights) {
+        for (Highlight highlight : highlights) {
+            Document doc = playground.getDocument();
+            int start = highlight.getStartOffset();
+            int end = highlight.getEndOffset();
+
+            String annotationType = getAnnotationType();
+            Pattern annotationPattern = Pattern.compile(" ?<START:" + annotationType + ">.+?<END> ?");
+            try {
+                int caretPos = playground.getCaretPosition();
+                String highlighted = doc.getText(start, (end - start));
+                Matcher annotationMatcher = annotationPattern.matcher(highlighted);
+                if (annotationMatcher.find()) {
+                    String unannotated = highlighted.replaceAll(" ?<START:" + annotationType + "> ", "");
+                    unannotated = unannotated.replaceAll(" <END> ?", "");
+                    String unannotatedDoc = doc.getText(0, doc.getLength()).replaceAll(highlighted, unannotated);
+                    doc.remove(0, doc.getLength());
+                    doc.insertString(0, unannotatedDoc, null);
+                    playground.setCaretPosition(caretPos);
+                }
+            } catch (BadLocationException e1) {
+                e1.printStackTrace();
+            }
+        }
+        removeHighlights();
+        highlightAnnotations();
+        highlightFound();
     }
 
     private class PlaygroundKeyListener implements KeyListener {
@@ -58,102 +153,35 @@ public class Main extends javax.swing.JFrame {
         @Override
         public void keyPressed(KeyEvent e) {
             if (document != null) {
+
                 if (e.getKeyCode() == KeyEvent.VK_F1) {
+                    Highlight[] highlights = playground.getHighlighter().getHighlights();
+                    undoStates.push(playground.getText());
                     //F1 key - add annotation to single element
-                    Highlight[] highlights = playground.getHighlighter().getHighlights();
-                    for (Highlight highlight : highlights) {
-                        Document doc = playground.getDocument();
-                        int start = highlight.getStartOffset();
-                        int end = highlight.getEndOffset();
-
-                        String annotation = getAnnotation();
-                        try {
-                            doc.insertString(start, annotation, null);
-                            doc.insertString(end + annotation.length(), " <END> ", null);
-                        } catch (BadLocationException e1) {
-                            e1.printStackTrace();
-                        }
-                    }
-                    removeHighlights();
-                    highlightAnnotations();
-                    highlightFound();
+                    annotateSingle(highlights);
                 } else if (e.getKeyCode() == KeyEvent.VK_F2) {
-                    //F2 key - add annotation to all elements
                     Highlight[] highlights = playground.getHighlighter().getHighlights();
-                    for (Highlight highlight : highlights) {
-                        Document doc = playground.getDocument();
-                        int start = highlight.getStartOffset();
-                        int end = highlight.getEndOffset();
-
-                        String annotation = getAnnotation();
-                        try {
-                            int caretPos = playground.getCaretPosition();
-                            String selectedText = doc.getText(start, end - start);
-                            String annotated = doc.getText(0, doc.getLength()).replaceAll(selectedText, annotation + selectedText + " <END> ");
-                            doc.remove(0, doc.getLength());
-                            doc.insertString(0, annotated, null);
-                            playground.setCaretPosition(caretPos);
-                        } catch (BadLocationException e1) {
-                            e1.printStackTrace();
-                        }
-                    }
-                    removeHighlights();
-                    highlightAnnotations();
-                    highlightFound();
+                    undoStates.push(playground.getText());
+                    //F2 key - add annotation to all elements
+                    annotateMultiple(highlights);
                 } else if ((e.getKeyCode() == KeyEvent.VK_F) && ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0)) {
                     findActionPerformed(null);
+                } else if ((e.getKeyCode() == KeyEvent.VK_Z) && ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0)) {
+                    undo();
+                } else if ((e.getKeyCode() == KeyEvent.VK_Y) && ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0)) {
+                    redo();
+                } else if ((e.getKeyCode() == KeyEvent.VK_P) && ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0)) {
+                    processMonitor.setVisible(true);
                 } else if (e.getKeyCode() == KeyEvent.VK_F3) {
+                    Highlight[] highlights = playground.getHighlighter().getHighlights();
+                    undoStates.push(playground.getText());
                     //F3 Key - remove annotation from single element
-                    Highlight[] highlights = playground.getHighlighter().getHighlights();
-                    for (Highlight highlight : highlights) {
-                        Document doc = playground.getDocument();
-                        int start = highlight.getStartOffset();
-                        int end = highlight.getEndOffset();
-
-                        String annotationType = type.getSelectedItem().toString();
-                        Pattern annotationPattern = Pattern.compile(" ?<START:" + annotationType + ">.+?<END> ?");
-                        try {
-                            String highlighted = doc.getText(start, (end - start));
-                            Matcher annotationMatcher = annotationPattern.matcher(highlighted);
-                            if (annotationMatcher.find()) {
-                                highlighted = highlighted.replaceAll(" ?<START:" + annotationType + "> ", "");
-                                highlighted = highlighted.replaceAll(" <END> ?", "");
-                                doc.remove(start, (end - start));
-                                doc.insertString(start, highlighted, null);
-                            }
-                        } catch (BadLocationException e1) {
-                            e1.printStackTrace();
-                        }
-                    }
+                    unannotateSingle(highlights);
                 } else if (e.getKeyCode() == KeyEvent.VK_F4) {
-                    //F4 Key - remove annotation from all elements
                     Highlight[] highlights = playground.getHighlighter().getHighlights();
-                    for (Highlight highlight : highlights) {
-                        Document doc = playground.getDocument();
-                        int start = highlight.getStartOffset();
-                        int end = highlight.getEndOffset();
-
-                        String annotationType = type.getSelectedItem().toString();
-                        Pattern annotationPattern = Pattern.compile(" ?<START:" + annotationType + ">.+?<END> ?");
-                        try {
-                            int caretPos = playground.getCaretPosition();
-                            String highlighted = doc.getText(start, (end - start));
-                            Matcher annotationMatcher = annotationPattern.matcher(highlighted);
-                            if (annotationMatcher.find()) {
-                                String unannotated = highlighted.replaceAll(" ?<START:" + annotationType + "> ", "");
-                                unannotated = unannotated.replaceAll(" <END> ?", "");
-                                String unannotatedDoc = doc.getText(0, doc.getLength()).replaceAll(highlighted, unannotated);
-                                doc.remove(0, doc.getLength());
-                                doc.insertString(0, unannotatedDoc, null);
-                                playground.setCaretPosition(caretPos);
-                            }
-                        } catch (BadLocationException e1) {
-                            e1.printStackTrace();
-                        }
-                    }
-                    removeHighlights();
-                    highlightAnnotations();
-                    highlightFound();
+                    undoStates.push(playground.getText());
+                    //F4 Key - remove annotation from all elements
+                    unannotateMultiple(highlights);
                 }
             }
         }
@@ -164,15 +192,44 @@ public class Main extends javax.swing.JFrame {
         }
     }
 
-    public ProcessMonitor getProcesMonitor() {
+    public ProcessMonitor getProcessMonitor() {
         return processMonitor;
     }
 
+    private void undo() {
+        if (document != null && !undoStates.isEmpty()) {
+            int caretPos = playground.getCaretPosition();
+            redoStates.push(playground.getText());
+            playground.setText(undoStates.pop());
+            playground.setCaretPosition(caretPos);
+            removeHighlights();
+            highlightAnnotations();
+            highlightFound();
+        }
+    }
+
+    private void redo() {
+        if (document != null && !redoStates.isEmpty()) {
+            int caretPos = playground.getCaretPosition();
+            undoStates.push(playground.getText());
+            playground.setText(redoStates.pop());
+            playground.setCaretPosition(caretPos);
+            removeHighlights();
+            highlightAnnotations();
+            highlightFound();
+        }
+    }
+
     private String getAnnotation() {
-        String annotationType = type.getSelectedItem().toString();
+        String annotationType = getAnnotationType();
         String annotation = " <START:" + annotationType + "> ";
 
         return annotation;
+    }
+
+    private String getAnnotationType() {
+        String annotationType = type.getSelectedItem().toString().replace("--", "").replace(" ", "_");
+        return annotationType;
     }
 
     public void highlightAnnotations() {
@@ -189,22 +246,27 @@ public class Main extends javax.swing.JFrame {
             int len = str.length();
             int index = text.indexOf(str);
             while (index >= 0) {
-                int end = index + len;
-                AttributeSet oldSet = style.getCharacterElement(end - 1).getAttributes();
-                StyleContext sc = StyleContext.getDefaultStyleContext();
-                AttributeSet textColor = sc.addAttribute(oldSet, StyleConstants.Foreground, foreColor);
-                AttributeSet bold = sc.addAttribute(textColor, StyleConstants.Bold, isBold);
-                if (backColor != null) {
-                    AttributeSet background = sc.addAttribute(bold, StyleConstants.Background, backColor);
-                    style.setCharacterAttributes(index, len, background, true);
-                } else {
-                    style.setCharacterAttributes(index, len, bold, true);
-                }
+                applyTextStyle(index, len, isBold, foreColor, backColor);
 
                 index = text.indexOf(str, index + 1);
             }
         } catch (BadLocationException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void applyTextStyle(int index, int len, Boolean isBold, Color foreColor, Color backColor) {
+        StyledDocument style = playground.getStyledDocument();
+        int end = index + len;
+        AttributeSet oldSet = style.getCharacterElement(end - 1).getAttributes();
+        StyleContext sc = StyleContext.getDefaultStyleContext();
+        AttributeSet textColor = sc.addAttribute(oldSet, StyleConstants.Foreground, foreColor);
+        AttributeSet bold = sc.addAttribute(textColor, StyleConstants.Bold, isBold);
+        if (backColor != null) {
+            AttributeSet background = sc.addAttribute(bold, StyleConstants.Background, backColor);
+            style.setCharacterAttributes(index, len, background, true);
+        } else {
+            style.setCharacterAttributes(index, len, bold, true);
         }
     }
 
@@ -233,6 +295,7 @@ public class Main extends javax.swing.JFrame {
     }
 
     public void replaceAllText(List selections, String replace) {
+        undoStates.push(playground.getText());
         Document doc = playground.getDocument();
         try {
             String text = doc.getText(0, doc.getLength());
@@ -246,16 +309,185 @@ public class Main extends javax.swing.JFrame {
         }
     }
 
-    private void populateAnnotationTypes(JComboBox jComboBox) {
+    public void populateDocumentCategories() {
         DefaultComboBoxModel model = new DefaultComboBoxModel();
+        model.addElement("Biofuels");
+        model.addElement("Coal");
+        model.addElement("Communications");
+        model.addElement("Electricity");
+        model.addElement("General Facilities");
+        model.addElement("Healthcare");
+        model.addElement("Manufacturing");
+        model.addElement("Natural_Gas");
+        model.addElement("Petroleum");
         model.addElement("Water");
         model.addElement("Wastewater_System");
         model.addElement("Recycled_Water_System");
-        model.addElement("Electricity");
-        model.addElement("Natural_Gas");
-        model.addElement("Petroleum");
 
-        jComboBox.setModel(model);
+        doccat.setModel(model);
+    }
+
+    private void populateAnnotationTypes() {
+        DefaultComboBoxModel model = new DefaultComboBoxModel();
+        model.addElement("--Biofuels--");
+        model.addElement("Biodiesel Production Plant");
+        model.addElement("Ethanol Production Plant");
+        model.addElement("--Coal--");
+        model.addElement("Coal Cleaning Plant");
+        model.addElement("Coal Mine");
+        model.addElement("Coal Preparation Plant");
+        model.addElement("Coal Pulverizing Plant");
+        model.addElement("Coal Surface Mine");
+        model.addElement("Coal Underground Mine");
+        model.addElement("--Communications--");
+        model.addElement("AM Radio");
+        model.addElement("Access Tandem");
+        model.addElement("Cable Television Network");
+        model.addElement("Cellular Site");
+        model.addElement("Central Office");
+        model.addElement("Coaxial Cable");
+        model.addElement("Copper Pair");
+        model.addElement("Data Center");
+        model.addElement("Digital Television Radio");
+        model.addElement("FM Radio");
+        model.addElement("Headend Facility");
+        model.addElement("Interconnection Facility (Internet)");
+        model.addElement("Internet Exchange Point");
+        model.addElement("Local Area Network");
+        model.addElement("Microwave Site");
+        model.addElement("Mobile Telephone Switching Office");
+        model.addElement("Network");
+        model.addElement("Network Access Point");
+        model.addElement("Network Operations Center");
+        model.addElement("Optical Fiber");
+        model.addElement("Peering Point");
+        model.addElement("Point of Presence");
+        model.addElement("Radio Broadcast Site");
+        model.addElement("Radio Systems");
+        model.addElement("SCADA Network");
+        model.addElement("Satellite Ground Station");
+        model.addElement("Submarine Cable");
+        model.addElement("Switching/Routing Facility");
+        model.addElement("Telephone Switching Facility");
+        model.addElement("Toll Office");
+        model.addElement("Wide Area Network");
+        model.addElement("Wired Link");
+        model.addElement("--Electricity--");
+        model.addElement("Battery");
+        model.addElement("Capacitor Station");
+        model.addElement("Circuit (Line)");
+        model.addElement("Coal Fired Generation Plant");
+        model.addElement("Combined Heat Power Plant");
+        model.addElement("Compressed Air");
+        model.addElement("Concentrated Solar");
+        model.addElement("Direct Current Converter Station");
+        model.addElement("Dispatch and Control Center");
+        model.addElement("Distillate Fuel Oil Generation Plant");
+        model.addElement("Energy Storage");
+        model.addElement("Flywheel");
+        model.addElement("Fossil Fuel Generation Plant");
+        model.addElement("Fuel Cell");
+        model.addElement("Generation Plant");
+        model.addElement("Geothermal Generation Plant");
+        model.addElement("Hydroelectric Facility");
+        model.addElement("Natural Gas Generation Plant");
+        model.addElement("Nuclear Generation Plant");
+        model.addElement("Photovoltaic");
+        model.addElement("Renewable Generation Plant");
+        model.addElement("Solar Generation Facility");
+        model.addElement("Substation");
+        model.addElement("Transmission and Distribution");
+        model.addElement("Wind Farm");
+        model.addElement("Wind Turbine");
+        model.addElement("--General Facilities--");
+        model.addElement("Campus (Installation)");
+        model.addElement("Office Building");
+        model.addElement("--Healthcare--");
+        model.addElement("Blood Manufacturing Facility");
+        model.addElement("Hospital");
+        model.addElement("Linens");
+        model.addElement("Medical Laboratory");
+        model.addElement("Support Service");
+        model.addElement("--Manufacturing--");
+        model.addElement("Nuclear Fuel Fabrication");
+        model.addElement("Olefin Plant");
+        model.addElement("Petrochemical Manufacturing");
+        model.addElement("Plastic Product Manufacturing");
+        model.addElement("--Natural Gas--");
+        model.addElement("Compressed Natural Gas Plant");
+        model.addElement("Condensate Storage Tank");
+        model.addElement("Dehydrator");
+        model.addElement("Dispatch and Control Center");
+        model.addElement("Liquefied Natural Gas Plant");
+        model.addElement("Local Distribution System");
+        model.addElement("Natural Gas Compressor Station");
+        model.addElement("Natural Gas Gathering Pipeline");
+        model.addElement("Natural Gas Liquids Fractionation Plant");
+        model.addElement("Natural Gas Liquids Pipeline");
+        model.addElement("Natural Gas Liquids Storage Facility");
+        model.addElement("Natural Gas Market Hub");
+        model.addElement("Natural Gas Metering Station");
+        model.addElement("Natural Gas Processing Plant");
+        model.addElement("Natural Gas Storage Facility");
+        model.addElement("Natural Gas Transmission Pipeline");
+        model.addElement("Production Separator");
+        model.addElement("Production Wellhead");
+        model.addElement("Regulator Station");
+        model.addElement("--Petroleum--");
+        model.addElement("Carbon Dioxide Pipeline");
+        model.addElement("Crude Oil");
+        model.addElement("Crude Oil Feeder Pipeline");
+        model.addElement("Crude Oil Gathering Pipeline");
+        model.addElement("Crude Oil Tank");
+        model.addElement("Crude Oil Transmission Pipeline");
+        model.addElement("Dispatch and Control Center");
+        model.addElement("Heater-Treater");
+        model.addElement("Highly Volatile Liquid Pipeline ");
+        model.addElement("Line Heater");
+        model.addElement("Petroleum Bulk Terminal");
+        model.addElement("Petroleum Product");
+        model.addElement("Petroleum Pump Station");
+        model.addElement("Production Wellhead");
+        model.addElement("Refined Product Pipeline");
+        model.addElement("Refinery");
+        model.addElement("--Water--");
+        model.addElement("Aquifer Storage Recovery");
+        model.addElement("Combined Sewer Outfall");
+        model.addElement("Diversion Dam");
+        model.addElement("Finished Water Main");
+        model.addElement("Finished Water Pump Station");
+        model.addElement("Finished Water Reservior");
+        model.addElement("Finished Water Storage");
+        model.addElement("Finished Water System");
+        model.addElement("Finished Water Tower");
+        model.addElement("Ground Water Well");
+        model.addElement("Interconnect");
+        model.addElement("Raw Water Aqueduct");
+        model.addElement("Raw Water Canal");
+        model.addElement("Raw Water Conveyance");
+        model.addElement("Raw Water Intake");
+        model.addElement("Raw Water Pipeline");
+        model.addElement("Raw Water Pump Station");
+        model.addElement("Raw Water Reservior");
+        model.addElement("Raw Water Storage");
+        model.addElement("Raw Water System");
+        model.addElement("Raw Water Tank");
+        model.addElement("Recycled Water Pump Station");
+        model.addElement("Recycled Water Reservior");
+        model.addElement("Recycled Water Storage");
+        model.addElement("Recycled Water System");
+        model.addElement("Recycled Water Tank");
+        model.addElement("Recycled Water Treatment Plant");
+        model.addElement("Wastewater Force Main");
+        model.addElement("Wastewater Gravity Main");
+        model.addElement("Wastewater Lift Station");
+        model.addElement("Wastewater Pump Station");
+        model.addElement("Wastewater System");
+        model.addElement("Wastewater Treatment Plant");
+        model.addElement("Water System Control Center");
+        model.addElement("Water Treatment Plant");
+
+        type.setModel(model);
     }
 
     @SuppressWarnings("unchecked")
@@ -278,9 +510,9 @@ public class Main extends javax.swing.JFrame {
         host = new JTextField();
         status = new javax.swing.JLabel();
         type = new JComboBox();
-        populateAnnotationTypes(type);
+        populateAnnotationTypes();
         doccat = new JComboBox();
-        populateAnnotationTypes(doccat);
+        populateDocumentCategories();
         trainDoccat = new JButton();
 
         JLabel annotationLblTag = new JLabel();
@@ -515,6 +747,9 @@ public class Main extends javax.swing.JFrame {
 
     private void trainNERModelActionPerformed(ActionEvent evt) {
         if (document != null) {
+            ProcessMonitor procMon = getProcessMonitor();
+            procMon.setVisible(true);
+            String procId = procMon.addProcess("(" + Instant.now() + ") Training NER Model");
             new Thread(() -> {
                 try {
                     ParameterizedTypeReference<HashMap<String, Object>> responseType =
@@ -524,11 +759,7 @@ public class Main extends javax.swing.JFrame {
                     RequestEntity<Void> request = RequestEntity.get(new URI(getHostURL() + "/documents/trainNER" + "?category=" + document.get("category").toString() + "&doAsync=false"))
                             .accept(MediaType.APPLICATION_JSON).build();
 
-                    ProcessMonitor procMon = getProcesMonitor();
-                    procMon.setVisible(true);
-                    String procId = procMon.addProcess("(" + Instant.now() + ") Training NER Model");
                     ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
-                    procMon.removeProcess(procId);
 
                     if (response.getStatusCode() == HttpStatus.OK) {
                         status.setText("NER Model Training Completed");
@@ -541,12 +772,17 @@ public class Main extends javax.swing.JFrame {
                     JOptionPane.showMessageDialog(this, e.getMessage());
                 } catch (HttpServerErrorException e) {
                     JOptionPane.showMessageDialog(this, e.getResponseBodyAsString());
+                } finally {
+                    procMon.removeProcess(procId);
                 }
             }).start();
         }
     }
 
     private void trainDoccatModelActionPerformed(ActionEvent evt) {
+        ProcessMonitor procMon = getProcessMonitor();
+        procMon.setVisible(true);
+        String procId = procMon.addProcess("(" + Instant.now() + ") Training Doccat Model");
         new Thread(() -> {
             try {
                 ParameterizedTypeReference<HashMap<String, Object>> responseType =
@@ -556,11 +792,8 @@ public class Main extends javax.swing.JFrame {
                 RequestEntity<Void> request = RequestEntity.get(new URI(getHostURL() + "/documents/trainDoccat?doAsync=false"))
                         .accept(MediaType.APPLICATION_JSON).build();
 
-                ProcessMonitor procMon = getProcesMonitor();
-                procMon.setVisible(true);
-                String procId = procMon.addProcess("(" + Instant.now() + ") Training Doccat Model");
+
                 ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
-                procMon.removeProcess(procId);
 
                 if (response.getStatusCode() == HttpStatus.OK) {
                     double accuracy = (double)response.getBody().get("data");
@@ -575,6 +808,8 @@ public class Main extends javax.swing.JFrame {
                 JOptionPane.showMessageDialog(this, e.getMessage());
             } catch (HttpServerErrorException e) {
                 JOptionPane.showMessageDialog(this, e.getResponseBodyAsString());
+            } finally {
+                procMon.removeProcess(procId);
             }
         }).start();
 
@@ -582,6 +817,8 @@ public class Main extends javax.swing.JFrame {
 
     private void resetActionPerformed(ActionEvent evt) {
         if (document != null) {
+            undoStates.empty();
+            redoStates.empty();
             playground.setText(document.get("parsed").toString());
             playground.setCaretPosition(0);
             highlightAnnotations();
@@ -592,6 +829,8 @@ public class Main extends javax.swing.JFrame {
 
     private void autoAnnotateActionPerformed(ActionEvent evt) {
         if (document != null) {
+            undoStates.empty();
+            redoStates.empty();
             try {
                 int threshold = slider.getValue();
 
@@ -644,6 +883,8 @@ public class Main extends javax.swing.JFrame {
     }
 
     public void loadDocument(Map document) {
+        undoStates.empty();
+        redoStates.empty();
         fileName.setText(document.get("filename").toString());
         doccat.setSelectedItem(document.get("category").toString());
         if (document.containsKey("annotated")) {
@@ -663,14 +904,15 @@ public class Main extends javax.swing.JFrame {
     }
 
     private boolean validateForSave() {
-        Pattern duplicateTags = Pattern.compile("(?<!(<END))>\\s*?<START:.+?>");
+        Pattern duplicateTags = Pattern.compile("<START:[\\w]*?>(?=(?:(?!<END>).)*<START:[\\w]*?>)", Pattern.MULTILINE);
         boolean isValid = true;
 
         String text = playground.getText();
         Matcher duplicateMatcher = duplicateTags.matcher(text);
         while(duplicateMatcher.find()) {
             String duplicateTag = text.substring(duplicateMatcher.start(), duplicateMatcher.end());
-            highlightText(duplicateTag, true, Color.RED, Color.black);
+            int len = duplicateTag.length();
+            applyTextStyle(duplicateMatcher.start() - 1, len, true, Color.RED, Color.black);
             isValid = false;
         }
 
@@ -687,6 +929,9 @@ public class Main extends javax.swing.JFrame {
 
     private void saveActionPerformed(java.awt.event.ActionEvent evt, boolean doNLP) {
         if (document != null && validateForSave()) {
+            ProcessMonitor procMon = getProcessMonitor();
+            procMon.setVisible(true);
+            String procId = procMon.addProcess("(" + Instant.now() + ") Processing Document: " + document.get("filename").toString());
             new Thread(() -> {
                 if (document.containsKey("annotated")) {
                     document.replace("annotated", playground.getText());
@@ -720,11 +965,7 @@ public class Main extends javax.swing.JFrame {
                             .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA_VALUE)
                             .body(body);
 
-                    ProcessMonitor procMon = getProcesMonitor();
-                    procMon.setVisible(true);
-                    String procId = procMon.addProcess("(" + Instant.now() + ") Processing Document: " + document.get("filename").toString());
                     ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
-                    procMon.removeProcess(procId);
 
                     if (response.getStatusCode() == HttpStatus.OK) {
                         if (doNLP) {
@@ -740,6 +981,8 @@ public class Main extends javax.swing.JFrame {
                     JOptionPane.showMessageDialog(this, e.getMessage());
                 } catch (ResourceAccessException e) {
                     JOptionPane.showMessageDialog(this, e.getMessage());
+                } finally {
+                    procMon.removeProcess(procId);
                 }
             }).start();
         } else {
@@ -759,6 +1002,10 @@ public class Main extends javax.swing.JFrame {
 
                     ResponseExtractor<Void> responseExtractor = response -> {
                         Files.copy(response.getBody(), path);
+                        if (Desktop.isDesktopSupported()) {
+                            File file = path.toFile();
+                            Desktop.getDesktop().open(file);
+                        }
                         return null;
                     };
 
@@ -792,6 +1039,8 @@ public class Main extends javax.swing.JFrame {
 
     private void deleteActionPerformed(ActionEvent evt) {
         if (document != null && JOptionPane.showConfirmDialog(this, "Are you sure?") == 0) {
+            undoStates.empty();
+            redoStates.empty();
             try {
                 ParameterizedTypeReference<HashMap<String, Object>> responseType =
                         new ParameterizedTypeReference<HashMap<String, Object>>() {};
