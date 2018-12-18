@@ -24,6 +24,7 @@
             <constraints/>
             <properties>
               <layoutOrientation value="0"/>
+              <selectionMode value="0"/>
             </properties>
           </component>
         </children>

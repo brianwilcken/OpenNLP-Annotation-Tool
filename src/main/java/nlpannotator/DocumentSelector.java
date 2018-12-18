@@ -47,6 +47,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
 
         populate();
 
+        addEventListeners();
         setTitle("Document Selector");
         setLocation(annotatorUI.getLocationOnScreen());
         setContentPane(panel1);
@@ -59,7 +60,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
         DocumentSelector selector = new DocumentSelector(null);
     }
 
-    private void populate() {
+    public void populate() {
         try {
             ParameterizedTypeReference<HashMap<String, Object>> responseType =
                     new ParameterizedTypeReference<HashMap<String, Object>>() {
@@ -91,36 +92,38 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
             list1.setSelectionMode(ListSelectionModel.SINGLE_INTERVAL_SELECTION);
             list1.setLayoutOrientation(JList.HORIZONTAL_WRAP);
             list1.setVisibleRowCount(-1);
-            list1.addListSelectionListener(this);
-
-            fileDrop = new FileDrop(list1, new FileDrop.Listener() {
-                @Override
-                public void filesDropped(File[] files) {
-                    uploadFiles(files);
-                }
-            });
-
-            loadURLButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent actionEvent) {
-                    loadURLActionListener(actionEvent);
-                }
-            });
-
-            crawlURLButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent actionEvent) {
-                    crawlURLActionListener(actionEvent);
-                }
-            });
 
             scrollPane1.setPreferredSize(new Dimension(400, 200));
-
         } catch (URISyntaxException e) {
             JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
         } catch (ResourceAccessException e) {
             JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
         }
+    }
+
+    private void addEventListeners() {
+        list1.addListSelectionListener(this);
+
+        fileDrop = new FileDrop(list1, new FileDrop.Listener() {
+            @Override
+            public void filesDropped(File[] files) {
+                uploadFiles(files);
+            }
+        });
+
+        loadURLButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                loadURLActionListener(actionEvent);
+            }
+        });
+
+        crawlURLButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                crawlURLActionListener(actionEvent);
+            }
+        });
     }
 
     private void uploadFiles(File[] files) {
@@ -159,7 +162,6 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
             } finally {
                 procMon.removeProcess(procId);
             }
-            setVisible(false);
             annotatorUI.loadActionPerformed(null);
         }).start();
     }
@@ -187,8 +189,6 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
                         .body(body);
 
                 ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
-
-                setVisible(false);
                 annotatorUI.loadActionPerformed(null);
             } catch (MalformedURLException e) {
                 textField1.setBackground(new Color(Color.RED.getRGB()));
@@ -210,9 +210,6 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
                 CrawlURLTask crawlURLTask = new CrawlURLTask(url.toString());
                 Thread thread = new Thread(crawlURLTask);
                 thread.start();
-
-//                setVisible(false);
-//                annotatorUI.loadActionPerformed(null);
             }
 
         } catch (MalformedURLException e) {
@@ -244,6 +241,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
         panel1.add(scrollPane1, new GridConstraints(2, 0, 1, 5, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(800, 600), new Dimension(800, 600), null, 0, false));
         list1 = new JList();
         list1.setLayoutOrientation(0);
+        list1.setSelectionMode(0);
         scrollPane1.setViewportView(list1);
         final JLabel label1 = new JLabel();
         label1.setText("Resource URL:");
@@ -306,25 +304,26 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
     @Override
     public void valueChanged(ListSelectionEvent listSelectionEvent) {
         try {
-            int index = listSelectionEvent.getFirstIndex();
-            Map doc = documents.get(index);
-            String id = doc.get("id").toString();
+            int index = list1.getSelectedIndex();
+            if (index > -1) {
+                Map doc = documents.get(index);
+                String id = doc.get("id").toString();
 
-            ParameterizedTypeReference<HashMap<String, Object>> responseType =
-                    new ParameterizedTypeReference<HashMap<String, Object>>() {
-                    };
+                ParameterizedTypeReference<HashMap<String, Object>> responseType =
+                        new ParameterizedTypeReference<HashMap<String, Object>>() {
+                        };
 
-            RequestEntity<Void> request = RequestEntity.get(new URI(annotatorUI.getHostURL() + "/documents?id=" + id))
-                    .accept(MediaType.APPLICATION_JSON).build();
+                RequestEntity<Void> request = RequestEntity.get(new URI(annotatorUI.getHostURL() + "/documents?id=" + id))
+                        .accept(MediaType.APPLICATION_JSON).build();
 
-            ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
+                ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
 
-            Map<String, Object> jsonDict = response.getBody();
+                Map<String, Object> jsonDict = response.getBody();
 
-            List<Map<String, Object>> document = ((List<Map<String, Object>>) jsonDict.get("data"));
+                List<Map<String, Object>> document = ((List<Map<String, Object>>) jsonDict.get("data"));
 
-            annotatorUI.loadDocument(document.get(0));
-            setVisible(false);
+                annotatorUI.loadDocument(document.get(0));
+            }
         } catch (URISyntaxException e) {
             JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
         }

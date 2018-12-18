@@ -1,5 +1,6 @@
 package nlpannotator;
 
+import common.FacilityTypes;
 import common.SizedStack;
 import common.Tools;
 import org.springframework.core.ParameterizedTypeReference;
@@ -36,6 +37,7 @@ public class Main extends javax.swing.JFrame {
     Map document;
     private RestTemplate restTemplate;
     private ProcessMonitor processMonitor;
+    private DocumentSelector documentSelector;
 
     private SizedStack<String> undoStates;
     private SizedStack<String> redoStates;
@@ -228,8 +230,15 @@ public class Main extends javax.swing.JFrame {
     }
 
     private String getAnnotationType() {
-        String annotationType = type.getSelectedItem().toString().replace("--", "").replace(" ", "_");
+        String annotationType = type.getSelectedItem().toString().replace("--", "");
+
         return annotationType;
+    }
+
+    public String getDocumentCategory() {
+        String category = doccat.getSelectedItem().toString();
+
+        return category;
     }
 
     public void highlightAnnotations() {
@@ -311,181 +320,24 @@ public class Main extends javax.swing.JFrame {
 
     public void populateDocumentCategories() {
         DefaultComboBoxModel model = new DefaultComboBoxModel();
-        model.addElement("Biofuels");
-        model.addElement("Coal");
-        model.addElement("Communications");
-        model.addElement("Electricity");
-        model.addElement("General Facilities");
-        model.addElement("Healthcare");
-        model.addElement("Manufacturing");
-        model.addElement("Natural_Gas");
-        model.addElement("Petroleum");
-        model.addElement("Water");
-        model.addElement("Wastewater_System");
-        model.addElement("Recycled_Water_System");
+
+        for (String key : FacilityTypes.dictionary.keySet()) {
+            model.addElement(key);
+        }
 
         doccat.setModel(model);
     }
 
     private void populateAnnotationTypes() {
         DefaultComboBoxModel model = new DefaultComboBoxModel();
-        model.addElement("--Biofuels--");
-        model.addElement("Biodiesel Production Plant");
-        model.addElement("Ethanol Production Plant");
-        model.addElement("--Coal--");
-        model.addElement("Coal Cleaning Plant");
-        model.addElement("Coal Mine");
-        model.addElement("Coal Preparation Plant");
-        model.addElement("Coal Pulverizing Plant");
-        model.addElement("Coal Surface Mine");
-        model.addElement("Coal Underground Mine");
-        model.addElement("--Communications--");
-        model.addElement("AM Radio");
-        model.addElement("Access Tandem");
-        model.addElement("Cable Television Network");
-        model.addElement("Cellular Site");
-        model.addElement("Central Office");
-        model.addElement("Coaxial Cable");
-        model.addElement("Copper Pair");
-        model.addElement("Data Center");
-        model.addElement("Digital Television Radio");
-        model.addElement("FM Radio");
-        model.addElement("Headend Facility");
-        model.addElement("Interconnection Facility (Internet)");
-        model.addElement("Internet Exchange Point");
-        model.addElement("Local Area Network");
-        model.addElement("Microwave Site");
-        model.addElement("Mobile Telephone Switching Office");
-        model.addElement("Network");
-        model.addElement("Network Access Point");
-        model.addElement("Network Operations Center");
-        model.addElement("Optical Fiber");
-        model.addElement("Peering Point");
-        model.addElement("Point of Presence");
-        model.addElement("Radio Broadcast Site");
-        model.addElement("Radio Systems");
-        model.addElement("SCADA Network");
-        model.addElement("Satellite Ground Station");
-        model.addElement("Submarine Cable");
-        model.addElement("Switching/Routing Facility");
-        model.addElement("Telephone Switching Facility");
-        model.addElement("Toll Office");
-        model.addElement("Wide Area Network");
-        model.addElement("Wired Link");
-        model.addElement("--Electricity--");
-        model.addElement("Battery");
-        model.addElement("Capacitor Station");
-        model.addElement("Circuit (Line)");
-        model.addElement("Coal Fired Generation Plant");
-        model.addElement("Combined Heat Power Plant");
-        model.addElement("Compressed Air");
-        model.addElement("Concentrated Solar");
-        model.addElement("Direct Current Converter Station");
-        model.addElement("Dispatch and Control Center");
-        model.addElement("Distillate Fuel Oil Generation Plant");
-        model.addElement("Energy Storage");
-        model.addElement("Flywheel");
-        model.addElement("Fossil Fuel Generation Plant");
-        model.addElement("Fuel Cell");
-        model.addElement("Generation Plant");
-        model.addElement("Geothermal Generation Plant");
-        model.addElement("Hydroelectric Facility");
-        model.addElement("Natural Gas Generation Plant");
-        model.addElement("Nuclear Generation Plant");
-        model.addElement("Photovoltaic");
-        model.addElement("Renewable Generation Plant");
-        model.addElement("Solar Generation Facility");
-        model.addElement("Substation");
-        model.addElement("Transmission and Distribution");
-        model.addElement("Wind Farm");
-        model.addElement("Wind Turbine");
-        model.addElement("--General Facilities--");
-        model.addElement("Campus (Installation)");
-        model.addElement("Office Building");
-        model.addElement("--Healthcare--");
-        model.addElement("Blood Manufacturing Facility");
-        model.addElement("Hospital");
-        model.addElement("Linens");
-        model.addElement("Medical Laboratory");
-        model.addElement("Support Service");
-        model.addElement("--Manufacturing--");
-        model.addElement("Nuclear Fuel Fabrication");
-        model.addElement("Olefin Plant");
-        model.addElement("Petrochemical Manufacturing");
-        model.addElement("Plastic Product Manufacturing");
-        model.addElement("--Natural Gas--");
-        model.addElement("Compressed Natural Gas Plant");
-        model.addElement("Condensate Storage Tank");
-        model.addElement("Dehydrator");
-        model.addElement("Dispatch and Control Center");
-        model.addElement("Liquefied Natural Gas Plant");
-        model.addElement("Local Distribution System");
-        model.addElement("Natural Gas Compressor Station");
-        model.addElement("Natural Gas Gathering Pipeline");
-        model.addElement("Natural Gas Liquids Fractionation Plant");
-        model.addElement("Natural Gas Liquids Pipeline");
-        model.addElement("Natural Gas Liquids Storage Facility");
-        model.addElement("Natural Gas Market Hub");
-        model.addElement("Natural Gas Metering Station");
-        model.addElement("Natural Gas Processing Plant");
-        model.addElement("Natural Gas Storage Facility");
-        model.addElement("Natural Gas Transmission Pipeline");
-        model.addElement("Production Separator");
-        model.addElement("Production Wellhead");
-        model.addElement("Regulator Station");
-        model.addElement("--Petroleum--");
-        model.addElement("Carbon Dioxide Pipeline");
-        model.addElement("Crude Oil");
-        model.addElement("Crude Oil Feeder Pipeline");
-        model.addElement("Crude Oil Gathering Pipeline");
-        model.addElement("Crude Oil Tank");
-        model.addElement("Crude Oil Transmission Pipeline");
-        model.addElement("Dispatch and Control Center");
-        model.addElement("Heater-Treater");
-        model.addElement("Highly Volatile Liquid Pipeline ");
-        model.addElement("Line Heater");
-        model.addElement("Petroleum Bulk Terminal");
-        model.addElement("Petroleum Product");
-        model.addElement("Petroleum Pump Station");
-        model.addElement("Production Wellhead");
-        model.addElement("Refined Product Pipeline");
-        model.addElement("Refinery");
-        model.addElement("--Water--");
-        model.addElement("Aquifer Storage Recovery");
-        model.addElement("Combined Sewer Outfall");
-        model.addElement("Diversion Dam");
-        model.addElement("Finished Water Main");
-        model.addElement("Finished Water Pump Station");
-        model.addElement("Finished Water Reservior");
-        model.addElement("Finished Water Storage");
-        model.addElement("Finished Water System");
-        model.addElement("Finished Water Tower");
-        model.addElement("Ground Water Well");
-        model.addElement("Interconnect");
-        model.addElement("Raw Water Aqueduct");
-        model.addElement("Raw Water Canal");
-        model.addElement("Raw Water Conveyance");
-        model.addElement("Raw Water Intake");
-        model.addElement("Raw Water Pipeline");
-        model.addElement("Raw Water Pump Station");
-        model.addElement("Raw Water Reservior");
-        model.addElement("Raw Water Storage");
-        model.addElement("Raw Water System");
-        model.addElement("Raw Water Tank");
-        model.addElement("Recycled Water Pump Station");
-        model.addElement("Recycled Water Reservior");
-        model.addElement("Recycled Water Storage");
-        model.addElement("Recycled Water System");
-        model.addElement("Recycled Water Tank");
-        model.addElement("Recycled Water Treatment Plant");
-        model.addElement("Wastewater Force Main");
-        model.addElement("Wastewater Gravity Main");
-        model.addElement("Wastewater Lift Station");
-        model.addElement("Wastewater Pump Station");
-        model.addElement("Wastewater System");
-        model.addElement("Wastewater Treatment Plant");
-        model.addElement("Water System Control Center");
-        model.addElement("Water Treatment Plant");
+
+        for (String key : FacilityTypes.dictionary.keySet()) {
+            model.addElement("--" + key + "--");
+            List<String> facilityTypes = FacilityTypes.dictionary.get(key);
+            for (String facilityType : facilityTypes) {
+                model.addElement(facilityType);
+            }
+        }
 
         type.setModel(model);
     }
@@ -868,7 +720,12 @@ public class Main extends javax.swing.JFrame {
     }
 
     public void loadActionPerformed(java.awt.event.ActionEvent evt) {
-        DocumentSelector documentSelector = new DocumentSelector(this);
+        if (documentSelector == null) {
+            documentSelector = new DocumentSelector(this);
+        } else {
+            documentSelector.populate();
+            documentSelector.setVisible(true);
+        }
     }
 
     private void metadataPerformed(java.awt.event.ActionEvent evt) {
@@ -897,10 +754,6 @@ public class Main extends javax.swing.JFrame {
         this.document = document;
         removeHighlights();
         highlightAnnotations();
-    }
-
-    public String getDocumentCategory() {
-        return doccat.getSelectedItem().toString();
     }
 
     private boolean validateForSave() {
@@ -973,6 +826,7 @@ public class Main extends javax.swing.JFrame {
                         } else {
                             status.setText("Save Successful");
                         }
+                        documentSelector.populate();
                     } else {
                         status.setText("SAVE FAILURE!!!");
                     }
@@ -1055,6 +909,7 @@ public class Main extends javax.swing.JFrame {
                     fileName.setText("");
                     document = null;
                     playground.setText("");
+                    documentSelector.populate();
                 } else {
                     JOptionPane.showMessageDialog(this, "Failed to delete document! Reason: " + response.getStatusCode());
                 }

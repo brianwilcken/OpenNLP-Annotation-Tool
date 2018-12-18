@@ -1,6 +1,7 @@
 package nlpannotator;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import common.Tools;
@@ -24,18 +25,6 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
     public static void main(String[] args) {
         FindAndReplace findAndReplace = new FindAndReplace("FindAndReplace", null);
         findAndReplace.init();
-    }
-
-    private static final Map<String, List<String>> dictionaries;
-
-    static {
-        dictionaries = new HashMap<>();
-        dictionaries.put("Water", Tools.extractEntriesFromDictionary(Tools.loadXML(Tools.getProperty("dict.water"), Dictionary.class)));
-        dictionaries.put("Wastewater_System", Tools.extractEntriesFromDictionary(Tools.loadXML(Tools.getProperty("dict.wastewater"), Dictionary.class)));
-        dictionaries.put("Recycled_Water_System", Tools.extractEntriesFromDictionary(Tools.loadXML(Tools.getProperty("dict.wastewater"), Dictionary.class)));
-        dictionaries.put("Electricity", Tools.extractEntriesFromDictionary(Tools.loadXML(Tools.getProperty("dict.power"), Dictionary.class)));
-        dictionaries.put("Petroleum", Tools.extractEntriesFromDictionary(Tools.loadXML(Tools.getProperty("dict.petro"), Dictionary.class)));
-        dictionaries.put("Natural_Gas", Tools.extractEntriesFromDictionary(Tools.loadXML(Tools.getProperty("dict.natgas"), Dictionary.class)));
     }
 
     private JButton findButton;
@@ -159,17 +148,26 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
 
     private void loadDictionaryActionPerformed(ActionEvent evt) {
         String category = annotator.getDocumentCategory();
-        if (dictionaries.containsKey(category)) {
-            List<String> dict = dictionaries.get(category);
-            for (String entry : dict) {
-                addFoundElement(entry);
-                //title caps version
-                String titleCaps = WordUtils.capitalizeFully(entry);
-                addFoundElement(titleCaps);
-                //all caps
-                addFoundElement(entry.toUpperCase());
-            }
+        String wordsText = Tools.getResource("dictionary/" + category + ".txt");
+        List<String> wordsList = Arrays.asList(wordsText.split("\\r\\n"));
+        int[] selections = lsFound.getSelectedIndices();
+        for (String entry : wordsList) {
+            String titleCaps = WordUtils.capitalizeFully(entry);
+            String allCaps = entry.toUpperCase();
+            selections = updateFoundSelections(entry, selections);
+            selections = updateFoundSelections(titleCaps, selections);
+            selections = updateFoundSelections(allCaps, selections);
         }
+        lsFound.setSelectedIndices(selections);
+    }
+
+    private int[] updateFoundSelections(String entry, int[] selections) {
+        if (!found.contains(entry)) {
+            found.addElement(entry);
+            int index = found.indexOf(entry);
+            selections = ArrayUtils.addAll(selections, new int[]{index});
+        }
+        return selections;
     }
 
     @Override
