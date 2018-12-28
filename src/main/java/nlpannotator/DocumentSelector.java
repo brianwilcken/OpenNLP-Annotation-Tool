@@ -30,6 +30,8 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
     private JScrollPane scrollPane1;
     private JTextField txtSymbol;
     private JButton fetchNewsButton;
+    private JSlider slider1;
+    private JComboBox symbolSelector;
     private List<Map> documents;
     private Main annotatorUI;
 
@@ -42,6 +44,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
 
         setTitle("Document Selector");
         setContentPane(panel1);
+        setLocation(annotatorUI.getLocationOnScreen());
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
         pack();
         setVisible(true);
@@ -53,6 +56,13 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
         list1.setVisibleRowCount(-1);
         list1.addListSelectionListener(this);
 
+        DefaultComboBoxModel model = new DefaultComboBoxModel();
+        List<String> symbols = getStockSymbols();
+        for (String symbol : symbols) {
+            model.addElement(symbol);
+        }
+        symbolSelector.setModel(model);
+
         fetchNewsButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -61,15 +71,37 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
         });
     }
 
+    private List<String> getStockSymbols() {
+        try {
+            ParameterizedTypeReference<HashMap<String, Object>> responseType =
+                    new ParameterizedTypeReference<HashMap<String, Object>>() {
+                    };
+
+            RequestEntity<Void> request = RequestEntity.get(new URI(restApiUrl + "/symbols"))
+                    .accept(MediaType.APPLICATION_JSON).build();
+
+            ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
+
+            Map<String, Object> jsonDict = response.getBody();
+
+            List<String> symbols = ((List<String>) jsonDict.get("data"));
+
+            return symbols;
+        } catch (URISyntaxException e) {
+            return null;
+        }
+    }
+
     private void fetchNewsActionPerformed(ActionEvent actionEvent) {
         try {
-            String symbol = txtSymbol.getText();
+            String symbol = symbolSelector.getSelectedItem().toString();
+            int rows = slider1.getValue();
 
             ParameterizedTypeReference<HashMap<String, Object>> responseType =
                     new ParameterizedTypeReference<HashMap<String, Object>>() {
                     };
 
-            RequestEntity<Void> request = RequestEntity.get(new URI(restApiUrl + "/news?symbols=" + symbol + "&rows=10"))
+            RequestEntity<Void> request = RequestEntity.get(new URI(restApiUrl + "/news?symbols=" + symbol + "&rows=" + rows))
                     .accept(MediaType.APPLICATION_JSON).build();
 
             ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
@@ -80,7 +112,12 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
 
             DefaultListModel<String> docsModel = new DefaultListModel<>();
             for (Map document : documents) {
-                docsModel.addElement(document.get("title").toString());
+                String unannotated = "";
+                if (document.get("annotated") == null) {
+                    unannotated = "*";
+                }
+                String itemText = unannotated + "(" + document.get("articleDate") + ") " + document.get("title").toString();
+                docsModel.addElement(itemText);
             }
 
             list1.setModel(docsModel);
@@ -91,10 +128,11 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
 
     @Override
     public void valueChanged(ListSelectionEvent listSelectionEvent) {
-        int index = listSelectionEvent.getFirstIndex();
-        Map doc = documents.get(index);
-        annotatorUI.loadDocument(doc);
-        setVisible(false);
+        int index = list1.getSelectedIndex();
+        if (index != -1) {
+            Map doc = documents.get(index);
+            annotatorUI.loadDocument(doc);
+        }
     }
 
     {
@@ -113,9 +151,9 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
      */
     private void $$$setupUI$$$() {
         panel1 = new JPanel();
-        panel1.setLayout(new GridLayoutManager(2, 3, new Insets(0, 0, 0, 0), -1, -1));
+        panel1.setLayout(new GridLayoutManager(2, 5, new Insets(0, 0, 0, 0), -1, -1));
         scrollPane1 = new JScrollPane();
-        panel1.add(scrollPane1, new GridConstraints(1, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(400, 200), null, 0, false));
+        panel1.add(scrollPane1, new GridConstraints(1, 0, 1, 5, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(800, 600), new Dimension(800, 600), null, 0, false));
         list1 = new JList();
         list1.setLayoutOrientation(2);
         list1.setSelectionMode(0);
@@ -123,11 +161,27 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
         final JLabel label1 = new JLabel();
         label1.setText("Enter Stock Symbol:");
         panel1.add(label1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        txtSymbol = new JTextField();
-        panel1.add(txtSymbol, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         fetchNewsButton = new JButton();
         fetchNewsButton.setText("Fetch News");
-        panel1.add(fetchNewsButton, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel1.add(fetchNewsButton, new GridConstraints(0, 4, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label2 = new JLabel();
+        label2.setText("Number Results:");
+        panel1.add(label2, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        slider1 = new JSlider();
+        slider1.setExtent(0);
+        slider1.setInverted(false);
+        slider1.setMajorTickSpacing(100);
+        slider1.setMaximum(1000);
+        slider1.setMinimum(0);
+        slider1.setMinorTickSpacing(25);
+        slider1.setPaintLabels(true);
+        slider1.setPaintTicks(true);
+        slider1.setSnapToTicks(true);
+        slider1.setValue(50);
+        slider1.setValueIsAdjusting(true);
+        panel1.add(slider1, new GridConstraints(0, 3, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        symbolSelector = new JComboBox();
+        panel1.add(symbolSelector, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     }
 
     /**

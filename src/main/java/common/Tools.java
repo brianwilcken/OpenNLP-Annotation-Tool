@@ -1,6 +1,7 @@
 package common;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -8,13 +9,21 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.core.io.ClassPathResource;
+
+import javax.swing.*;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Unmarshaller;
 
 public class Tools {
 
@@ -49,9 +58,9 @@ public class Tools {
         ClassPathResource resource = new ClassPathResource(name);
         String fileString = null;
         try {
-            fileString = Files.toString(resource.getFile(), Charsets.UTF_8);
+            fileString = IOUtils.toString(resource.getInputStream(), StandardCharsets.UTF_8.toString());
         } catch (IOException e) {
-            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, e.getMessage());
         }
         return fileString;
     }
@@ -152,4 +161,10 @@ public class Tools {
         Set<Object> seen = ConcurrentHashMap.newKeySet();
         return t -> seen.add(keyExtractor.apply(t));
     }
+
+    public static Comparator<Map<String, Object>> documentComparator = new Comparator<Map<String, Object>>() {
+        public int compare(Map<String, Object> m1, Map<String, Object> m2) {
+            return m1.get("filename").toString().compareTo(m2.get("filename").toString());
+        }
+    };
 }

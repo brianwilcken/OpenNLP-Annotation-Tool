@@ -1,21 +1,29 @@
 package nlpannotator;
 
+import common.SizedStack;
 import common.Tools;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.*;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Instant;
 import java.util.*;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.swing.*;
 import javax.swing.event.CaretEvent;
 import javax.swing.text.*;
@@ -27,13 +35,113 @@ public class Main extends javax.swing.JFrame {
     ArrayList<Offset> coordinates;
     Map document;
     private RestTemplate restTemplate;
-    private final String restApiUrl = Tools.getProperty("restApi.url");
+    private ProcessMonitor processMonitor;
+    private DocumentSelector documentSelector;
+
+    private SizedStack<String> undoStates;
+    private SizedStack<String> redoStates;
 
     public Main() {
-
+        undoStates = new SizedStack<>(10);
+        redoStates = new SizedStack<>(10);
+        processMonitor = new ProcessMonitor(this);
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         restTemplate = new RestTemplate(requestFactory);
         initComponents();
+    }
+
+    private void annotateSingle(Highlight[] highlights) {
+        for (Highlight highlight : highlights) {
+            Document doc = playground.getDocument();
+            int start = highlight.getStartOffset();
+            int end = highlight.getEndOffset();
+
+            String annotation = getAnnotation();
+            try {
+                doc.insertString(start, annotation, null);
+                doc.insertString(end + annotation.length(), " <END> ", null);
+            } catch (BadLocationException e1) {
+                e1.printStackTrace();
+            }
+        }
+        removeHighlights();
+        highlightAnnotations();
+        highlightFound();
+    }
+
+    private void annotateMultiple(Highlight[] highlights) {
+        for (Highlight highlight : highlights) {
+            Document doc = playground.getDocument();
+            int start = highlight.getStartOffset();
+            int end = highlight.getEndOffset();
+
+            String annotation = getAnnotation();
+            try {
+                int caretPos = playground.getCaretPosition();
+                String selectedText = doc.getText(start, end - start);
+                String annotated = doc.getText(0, doc.getLength()).replaceAll(selectedText, annotation + selectedText + " <END> ");
+                doc.remove(0, doc.getLength());
+                doc.insertString(0, annotated, null);
+                playground.setCaretPosition(caretPos);
+            } catch (BadLocationException e1) {
+                e1.printStackTrace();
+            }
+        }
+        removeHighlights();
+        highlightAnnotations();
+        highlightFound();
+    }
+
+    private void unannotateSingle(Highlight[] highlights) {
+        for (Highlight highlight : highlights) {
+            Document doc = playground.getDocument();
+            int start = highlight.getStartOffset();
+            int end = highlight.getEndOffset();
+
+            String annotationType = getAnnotationType();
+            Pattern annotationPattern = Pattern.compile(" ?<START:" + annotationType + ">.+?<END> ?");
+            try {
+                String highlighted = doc.getText(start, (end - start));
+                Matcher annotationMatcher = annotationPattern.matcher(highlighted);
+                if (annotationMatcher.find()) {
+                    highlighted = highlighted.replaceAll(" ?<START:" + annotationType + "> ", "");
+                    highlighted = highlighted.replaceAll(" <END> ?", "");
+                    doc.remove(start, (end - start));
+                    doc.insertString(start, highlighted, null);
+                }
+            } catch (BadLocationException e1) {
+                e1.printStackTrace();
+            }
+        }
+    }
+
+    private void unannotateMultiple(Highlight[] highlights) {
+        for (Highlight highlight : highlights) {
+            Document doc = playground.getDocument();
+            int start = highlight.getStartOffset();
+            int end = highlight.getEndOffset();
+
+            String annotationType = getAnnotationType();
+            Pattern annotationPattern = Pattern.compile(" ?<START:" + annotationType + ">.+?<END> ?");
+            try {
+                int caretPos = playground.getCaretPosition();
+                String highlighted = doc.getText(start, (end - start));
+                Matcher annotationMatcher = annotationPattern.matcher(highlighted);
+                if (annotationMatcher.find()) {
+                    String unannotated = highlighted.replaceAll(" ?<START:" + annotationType + "> ", "");
+                    unannotated = unannotated.replaceAll(" <END> ?", "");
+                    String unannotatedDoc = doc.getText(0, doc.getLength()).replaceAll(highlighted, unannotated);
+                    doc.remove(0, doc.getLength());
+                    doc.insertString(0, unannotatedDoc, null);
+                    playground.setCaretPosition(caretPos);
+                }
+            } catch (BadLocationException e1) {
+                e1.printStackTrace();
+            }
+        }
+        removeHighlights();
+        highlightAnnotations();
+        highlightFound();
     }
 
     private class PlaygroundKeyListener implements KeyListener {
@@ -46,50 +154,35 @@ public class Main extends javax.swing.JFrame {
         @Override
         public void keyPressed(KeyEvent e) {
             if (document != null) {
+
                 if (e.getKeyCode() == KeyEvent.VK_F1) {
-                    //F1 key
                     Highlight[] highlights = playground.getHighlighter().getHighlights();
-                    for (Highlight highlight : highlights) {
-                        Document doc = playground.getDocument();
-                        int start = highlight.getStartOffset();
-                        int end = highlight.getEndOffset();
-
-                        String annotation = getAnnotation();
-                        try {
-                            doc.insertString(start, annotation, null);
-                            doc.insertString(end + annotation.length(), " <END> ", null);
-                        } catch (BadLocationException e1) {
-                            e1.printStackTrace();
-                        }
-                    }
-                    removeHighlights();
-                    highlightAnnotations();
-                    highlightFound();
+                    undoStates.push(playground.getText());
+                    //F1 key - add annotation to single element
+                    annotateSingle(highlights);
                 } else if (e.getKeyCode() == KeyEvent.VK_F2) {
-                    //F2 key
                     Highlight[] highlights = playground.getHighlighter().getHighlights();
-                    for (Highlight highlight : highlights) {
-                        Document doc = playground.getDocument();
-                        int start = highlight.getStartOffset();
-                        int end = highlight.getEndOffset();
-
-                        String annotation = getAnnotation();
-                        try {
-                            int caretPos = playground.getCaretPosition();
-                            String selectedText = doc.getText(start, end - start);
-                            String annotated = doc.getText(0, doc.getLength()).replaceAll(selectedText, annotation + selectedText + " <END> ");
-                            doc.remove(0, doc.getLength());
-                            doc.insertString(0, annotated, null);
-                            playground.setCaretPosition(caretPos);
-                        } catch (BadLocationException e1) {
-                            e1.printStackTrace();
-                        }
-                    }
-                    removeHighlights();
-                    highlightAnnotations();
-                    highlightFound();
+                    undoStates.push(playground.getText());
+                    //F2 key - add annotation to all elements
+                    annotateMultiple(highlights);
                 } else if ((e.getKeyCode() == KeyEvent.VK_F) && ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0)) {
                     findActionPerformed(null);
+                } else if ((e.getKeyCode() == KeyEvent.VK_Z) && ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0)) {
+                    undo();
+                } else if ((e.getKeyCode() == KeyEvent.VK_Y) && ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0)) {
+                    redo();
+                } else if ((e.getKeyCode() == KeyEvent.VK_P) && ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0)) {
+                    processMonitor.setVisible(true);
+                } else if (e.getKeyCode() == KeyEvent.VK_F3) {
+                    Highlight[] highlights = playground.getHighlighter().getHighlights();
+                    undoStates.push(playground.getText());
+                    //F3 Key - remove annotation from single element
+                    unannotateSingle(highlights);
+                } else if (e.getKeyCode() == KeyEvent.VK_F4) {
+                    Highlight[] highlights = playground.getHighlighter().getHighlights();
+                    undoStates.push(playground.getText());
+                    //F4 Key - remove annotation from all elements
+                    unannotateMultiple(highlights);
                 }
             }
         }
@@ -100,11 +193,45 @@ public class Main extends javax.swing.JFrame {
         }
     }
 
+    public ProcessMonitor getProcessMonitor() {
+        return processMonitor;
+    }
+
+    private void undo() {
+        if (document != null && !undoStates.isEmpty()) {
+            int caretPos = playground.getCaretPosition();
+            redoStates.push(playground.getText());
+            playground.setText(undoStates.pop());
+            playground.setCaretPosition(caretPos);
+            removeHighlights();
+            highlightAnnotations();
+            highlightFound();
+        }
+    }
+
+    private void redo() {
+        if (document != null && !redoStates.isEmpty()) {
+            int caretPos = playground.getCaretPosition();
+            undoStates.push(playground.getText());
+            playground.setText(redoStates.pop());
+            playground.setCaretPosition(caretPos);
+            removeHighlights();
+            highlightAnnotations();
+            highlightFound();
+        }
+    }
+
     private String getAnnotation() {
-        String annotationType = type.getText();
+        String annotationType = getAnnotationType();
         String annotation = " <START:" + annotationType + "> ";
 
         return annotation;
+    }
+
+    private String getAnnotationType() {
+        String annotationType = type.getText();
+
+        return annotationType;
     }
 
     public void highlightAnnotations() {
@@ -121,22 +248,27 @@ public class Main extends javax.swing.JFrame {
             int len = str.length();
             int index = text.indexOf(str);
             while (index >= 0) {
-                int end = index + len;
-                AttributeSet oldSet = style.getCharacterElement(end - 1).getAttributes();
-                StyleContext sc = StyleContext.getDefaultStyleContext();
-                AttributeSet textColor = sc.addAttribute(oldSet, StyleConstants.Foreground, foreColor);
-                AttributeSet bold = sc.addAttribute(textColor, StyleConstants.Bold, isBold);
-                if (backColor != null) {
-                    AttributeSet background = sc.addAttribute(bold, StyleConstants.Background, backColor);
-                    style.setCharacterAttributes(index, len, background, true);
-                } else {
-                    style.setCharacterAttributes(index, len, bold, true);
-                }
+                applyTextStyle(index, len, isBold, foreColor, backColor);
 
                 index = text.indexOf(str, index + 1);
             }
         } catch (BadLocationException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void applyTextStyle(int index, int len, Boolean isBold, Color foreColor, Color backColor) {
+        StyledDocument style = playground.getStyledDocument();
+        int end = index + len;
+        AttributeSet oldSet = style.getCharacterElement(end - 1).getAttributes();
+        StyleContext sc = StyleContext.getDefaultStyleContext();
+        AttributeSet textColor = sc.addAttribute(oldSet, StyleConstants.Foreground, foreColor);
+        AttributeSet bold = sc.addAttribute(textColor, StyleConstants.Bold, isBold);
+        if (backColor != null) {
+            AttributeSet background = sc.addAttribute(bold, StyleConstants.Background, backColor);
+            style.setCharacterAttributes(index, len, background, true);
+        } else {
+            style.setCharacterAttributes(index, len, bold, true);
         }
     }
 
@@ -165,6 +297,7 @@ public class Main extends javax.swing.JFrame {
     }
 
     public void replaceAllText(List selections, String replace) {
+        undoStates.push(playground.getText());
         Document doc = playground.getDocument();
         try {
             String text = doc.getText(0, doc.getLength());
@@ -184,7 +317,8 @@ public class Main extends javax.swing.JFrame {
         jScrollPane1 = new javax.swing.JScrollPane();
         playground = new javax.swing.JTextPane();
         load = new javax.swing.JButton();
-        train = new javax.swing.JButton();
+        metadata = new javax.swing.JButton();
+        trainNER = new javax.swing.JButton();
         annotate = new javax.swing.JButton();
         reset = new javax.swing.JButton();
         find = new javax.swing.JButton();
@@ -193,9 +327,27 @@ public class Main extends javax.swing.JFrame {
         status = new javax.swing.JLabel();
         type = new JTextField(5);
         type.setText("SYM");
+        process = new javax.swing.JButton();
+        //download = new javax.swing.JButton();
+        delete = new javax.swing.JButton();
+        //fileName = new javax.swing.JLabel();
+        hostLabel = new JLabel();
+        host = new JTextField();
+        status = new javax.swing.JLabel();
+        //type = new JComboBox();
+        //populateAnnotationTypes();
+        //doccat = new JComboBox();
+        //populateDocumentCategories();
+        //trainDoccat = new JButton();
 
-        JLabel lblTag = new JLabel();
-        lblTag.setText("Annotation Tag:");
+        JLabel annotationLblTag = new JLabel();
+        annotationLblTag.setText("Annotation Tag:");
+
+        JLabel doccatLblTag = new JLabel();
+        doccatLblTag.setText("Document Category:");
+
+        hostLabel.setText("Host:");
+        host.setText(Tools.getProperty("restApi.url"));
 
         DefaultBoundedRangeModel model = new DefaultBoundedRangeModel(50, 0, 1, 100);
         slider = new JSlider(model);
@@ -228,14 +380,28 @@ public class Main extends javax.swing.JFrame {
             }
         });
 
-        train.setText("Train Model");
-        train.addActionListener(new java.awt.event.ActionListener() {
+        metadata.setText("Metadata");
+        metadata.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                trainModelActionPerformed(evt);
+                metadataPerformed(evt);
             }
         });
 
-        annotate.setText("Auto Detect");
+        trainNER.setText("Train NER Model");
+        trainNER.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                trainNERModelActionPerformed(evt);
+            }
+        });
+
+//        trainDoccat.setText("Train DocCat Model");
+//        trainDoccat.addActionListener(new java.awt.event.ActionListener() {
+//            public void actionPerformed(java.awt.event.ActionEvent evt) {
+//                trainDoccatModelActionPerformed(evt);
+//            }
+//        });
+
+        annotate.setText("Auto Detect NER");
         annotate.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 autoAnnotateActionPerformed(evt);
@@ -256,10 +422,38 @@ public class Main extends javax.swing.JFrame {
             }
         });
 
-        save.setText("Save");
+        save.setText("Save Document");
         save.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                saveActionPerformed(evt);
+                saveActionPerformed(evt, false);
+            }
+        });
+
+        process.setText("Process Document");
+        process.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                saveActionPerformed(evt, true);
+            }
+        });
+
+//        download.setText("Download Document");
+//        download.addActionListener(new java.awt.event.ActionListener() {
+//            public void actionPerformed(java.awt.event.ActionEvent evt) {
+//                downloadActionPerformed(evt);
+//            }
+//        });
+
+        delete.setText("Delete Document");
+        delete.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                deleteActionPerformed(evt);
+            }
+        });
+
+        type.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                highlightActionPerformed(actionEvent);
             }
         });
 
@@ -272,26 +466,42 @@ public class Main extends javax.swing.JFrame {
             .addComponent(jScrollPane1)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                 .addGap(2, 2, 2)
+                //.addComponent(fileName, javax.swing.GroupLayout.PREFERRED_SIZE, 240, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addComponent(docTitle, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
+                .addComponent(hostLabel)
+                .addComponent(host)
                 .addComponent(load)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 60, Short.MAX_VALUE)
-                .addComponent(train)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 60, Short.MAX_VALUE)
-                .addComponent(lblTag)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 20, Short.MAX_VALUE)
+                .addComponent(metadata)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 100, Short.MAX_VALUE)
+                .addComponent(annotationLblTag)
                 .addComponent(type)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 60, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 10, Short.MAX_VALUE)
                 .addComponent(annotate)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 5, Short.MAX_VALUE)
                 .addComponent(slider)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 60, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 10, Short.MAX_VALUE)
+                .addComponent(trainNER)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 100, Short.MAX_VALUE)
+//                .addComponent(doccatLblTag)
+//                .addComponent(doccat)
+//                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 10, Short.MAX_VALUE)
+//                .addComponent(trainDoccat)
+//                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 100, Short.MAX_VALUE)
                 .addComponent(reset)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 60, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 20, Short.MAX_VALUE)
                 .addComponent(find)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 60, Short.MAX_VALUE)
-                .addComponent(status, javax.swing.GroupLayout.PREFERRED_SIZE, 160, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(status, javax.swing.GroupLayout.PREFERRED_SIZE, 260, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(save)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 5, Short.MAX_VALUE)
+                .addComponent(process)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 5, Short.MAX_VALUE)
+//                .addComponent(download)
+//                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 5, Short.MAX_VALUE)
+                .addComponent(delete)
                 .addGap(29, 29, 29))
         );
         layout.setVerticalGroup(
@@ -300,19 +510,27 @@ public class Main extends javax.swing.JFrame {
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(hostLabel)
+                            .addComponent(host)
                             .addComponent(load)
-                            .addComponent(train)
-                            .addComponent(lblTag)
+                            .addComponent(metadata)
+                            .addComponent(annotationLblTag)
                             .addComponent(type)
                             .addComponent(annotate)
                             .addComponent(slider)
+                            .addComponent(trainNER)
                             .addComponent(reset)
                             .addComponent(find)
                             .addComponent(save)
                             .addComponent(docTitle, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(process)
+//                            .addComponent(download)
+                            .addComponent(delete)
+//                            .addComponent(fileName, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addComponent(status, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 480, Short.MAX_VALUE))
+                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 480, Short.MAX_VALUE)
+            )
         );
 
         pack();
@@ -337,37 +555,58 @@ public class Main extends javax.swing.JFrame {
                     String selectedText = doc.getText(start, end - start);
                     findAndReplace.findHighlighted(selectedText);
                 } catch (BadLocationException e) {
-                    e.printStackTrace();
+                    JOptionPane.showMessageDialog(this, e.getMessage());
                 }
             }
         }
     }
 
-    private void trainModelActionPerformed(ActionEvent evt) {
+    private void highlightActionPerformed(ActionEvent evt) {
         if (document != null) {
-            try {
-                ParameterizedTypeReference<HashMap<String, Object>> responseType =
-                        new ParameterizedTypeReference<HashMap<String, Object>>() {
-                        };
+            removeHighlights();
+            highlightAnnotations();
+            highlightFound();
+        }
+    }
 
-                RequestEntity<Void> request = RequestEntity.get(new URI(restApiUrl + "/trainNER"))
-                        .accept(MediaType.APPLICATION_JSON).build();
+    private void trainNERModelActionPerformed(ActionEvent evt) {
+        if (document != null) {
+            ProcessMonitor procMon = getProcessMonitor();
+            procMon.setVisible(true);
+            String procId = procMon.addProcess("(" + Instant.now() + ") Training NER Model");
+            new Thread(() -> {
+                try {
+                    ParameterizedTypeReference<HashMap<String, Object>> responseType =
+                            new ParameterizedTypeReference<HashMap<String, Object>>() {
+                            };
 
-                ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
+                    RequestEntity<Void> request = RequestEntity.get(new URI(getHostURL() + "/documents/trainNER" + "?category=" + document.get("category").toString() + "&doAsync=false"))
+                            .accept(MediaType.APPLICATION_JSON).build();
 
-                if (response.getStatusCode() == HttpStatus.OK) {
-                    status.setText("Model Training Started");
-                } else {
-                    status.setText("SERVER ERROR!!!");
+                    ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
+
+                    if (response.getStatusCode() == HttpStatus.OK) {
+                        status.setText("NER Model Training Completed");
+                    } else {
+                        status.setText("SERVER ERROR!!!");
+                    }
+                } catch (URISyntaxException e) {
+                    JOptionPane.showMessageDialog(this, e.getMessage());
+                } catch (ResourceAccessException e) {
+                    JOptionPane.showMessageDialog(this, e.getMessage());
+                } catch (HttpServerErrorException e) {
+                    JOptionPane.showMessageDialog(this, e.getResponseBodyAsString());
+                } finally {
+                    procMon.removeProcess(procId);
                 }
-            } catch (URISyntaxException e) {
-                e.printStackTrace();
-            }
+            }).start();
         }
     }
 
     private void resetActionPerformed(ActionEvent evt) {
         if (document != null) {
+            undoStates.empty();
+            redoStates.empty();
             playground.setText(document.get("parsed").toString());
             playground.setCaretPosition(0);
             highlightAnnotations();
@@ -378,13 +617,15 @@ public class Main extends javax.swing.JFrame {
 
     private void autoAnnotateActionPerformed(ActionEvent evt) {
         if (document != null) {
+            undoStates.empty();
+            redoStates.empty();
             try {
                 int threshold = slider.getValue();
 
                 ParameterizedTypeReference<HashMap<String, Object>> responseType =
                         new ParameterizedTypeReference<HashMap<String, Object>>() {};
 
-                RequestEntity<Void> request = RequestEntity.get(new URI(restApiUrl + "/annotate/" + document.get("id").toString() + "?threshold=" + threshold))
+                RequestEntity<Void> request = RequestEntity.get(new URI(getHostURL() + "/annotate/" + document.get("id").toString() + "?threshold=" + threshold))
                         .accept(MediaType.APPLICATION_JSON).build();
 
                 ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
@@ -397,19 +638,45 @@ public class Main extends javax.swing.JFrame {
                 playground.setCaretPosition(0);
                 highlightAnnotations();
             } catch (URISyntaxException e) {
-                e.printStackTrace();
+                JOptionPane.showMessageDialog(this, e.getMessage());
+            } catch (ResourceAccessException e) {
+                JOptionPane.showMessageDialog(this, e.getMessage());
             }
         } else {
             status.setText("Please load a document...");
         }
     }
 
+    public String getHostURL() {
+        return host.getText();
+    }
 
-    private void loadActionPerformed(java.awt.event.ActionEvent evt) {
-        DocumentSelector documentSelector = new DocumentSelector(this);
+    public void setStatusText(String text) {
+        status.setText(text);
+    }
+
+    public void loadActionPerformed(java.awt.event.ActionEvent evt) {
+        if (documentSelector == null) {
+            documentSelector = new DocumentSelector(this);
+        } else {
+            documentSelector.setVisible(true);
+        }
+    }
+
+    private void metadataPerformed(java.awt.event.ActionEvent evt) {
+        if (document != null) {
+            MetadataEditor editor = new MetadataEditor(this);
+            editor.populate(document);
+        }
+    }
+
+    public void updateMetadata(Map<Object, Object> doc) {
+        this.document = doc;
     }
 
     public void loadDocument(Map document) {
+        undoStates.empty();
+        redoStates.empty();
         docTitle.setText(document.get("title").toString());
         String annotated = (String)document.get("annotated");
         if (annotated != null) {
@@ -424,45 +691,117 @@ public class Main extends javax.swing.JFrame {
         highlightAnnotations();
     }
 
-    private void saveActionPerformed(java.awt.event.ActionEvent evt) {
-        if (document != null) {
-            if (document.containsKey("annotated")) {
-                document.replace("annotated", playground.getText());
-            } else {
-                document.put("annotated", playground.getText());
-            }
+    private boolean validateForSave() {
+        Pattern duplicateTags = Pattern.compile("<START:[\\w]*?>(?=(?:(?!<END>).)*<START:[\\w]*?>)", Pattern.MULTILINE);
+        boolean isValid = true;
 
-            try {
-                Map<String, String> doc = new HashMap<>();
-                for (Object key : document.keySet()) {
-                    String docKey = key.toString();
-                    if (document.get(key) != null) {
-                        String value = document.get(key).toString();
-                        doc.put(docKey, value);
-                    }
+        String text = playground.getText();
+        Matcher duplicateMatcher = duplicateTags.matcher(text);
+        while(duplicateMatcher.find()) {
+            String duplicateTag = text.substring(duplicateMatcher.start(), duplicateMatcher.end());
+            int len = duplicateTag.length();
+            applyTextStyle(duplicateMatcher.start() - 1, len, true, Color.RED, Color.black);
+            isValid = false;
+        }
+
+        if (isValid) {
+            removeHighlights();
+            highlightAnnotations();
+            highlightFound();
+        } else {
+            JOptionPane.showMessageDialog(this, "Please resolve all duplicate annotation tags before saving.");
+        }
+
+        return isValid;
+    }
+
+    private void saveActionPerformed(java.awt.event.ActionEvent evt, boolean doNLP) {
+        if (document != null && validateForSave()) {
+            ProcessMonitor procMon = getProcessMonitor();
+            procMon.setVisible(true);
+            String procId = procMon.addProcess("(" + Instant.now() + ") Processing Document: " + document.get("filename").toString());
+            new Thread(() -> {
+                if (document.containsKey("annotated")) {
+                    document.replace("annotated", playground.getText());
+                } else {
+                    document.put("annotated", playground.getText());
                 }
 
-                MultiValueMap<String, Object> newsData = new LinkedMultiValueMap<>();
-                newsData.add("newsData", doc);
+                try {
+                    Map<String, String> doc = new HashMap<>();
+                    for (Object key : document.keySet()) {
+                        String docKey = key.toString();
+                        Object value = document.get(key);
+                        if (value instanceof java.util.List) {
+                            doc.put(docKey, ((java.util.List) value).get(0).toString());
+                        } else {
+                            doc.put(docKey, value.toString());
+                        }
+                    }
 
+                    MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+                    body.add("newsData", doc);
+                    body.add("doNLP", doNLP);
+
+                    ParameterizedTypeReference<HashMap<String, Object>> responseType =
+                            new ParameterizedTypeReference<HashMap<String, Object>>() {};
+
+                    RequestEntity<Map> request = RequestEntity.put(new URI(getHostURL() + "/documents/metadata/" + document.get("id").toString()))
+                            .accept(MediaType.APPLICATION_JSON)
+                            .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA_VALUE)
+                            .body(body);
+
+                    ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
+
+                    if (response.getStatusCode() == HttpStatus.OK) {
+                        if (doNLP) {
+                            status.setText("Document Processing Complete");
+                        } else {
+                            status.setText("Save Successful");
+                        }
+                    } else {
+                        status.setText("SAVE FAILURE!!!");
+                    }
+
+                } catch (URISyntaxException e) {
+                    JOptionPane.showMessageDialog(this, e.getMessage());
+                } catch (ResourceAccessException e) {
+                    JOptionPane.showMessageDialog(this, e.getMessage());
+                } finally {
+                    procMon.removeProcess(procId);
+                }
+            }).start();
+        } else {
+            status.setText("Please load a document...");
+        }
+    }
+
+    private void deleteActionPerformed(ActionEvent evt) {
+        if (document != null && JOptionPane.showConfirmDialog(this, "Are you sure?") == 0) {
+            undoStates.empty();
+            redoStates.empty();
+            try {
                 ParameterizedTypeReference<HashMap<String, Object>> responseType =
                         new ParameterizedTypeReference<HashMap<String, Object>>() {};
 
-                RequestEntity<Map> request = RequestEntity.put(new URI(restApiUrl + "/news/" + document.get("id").toString()))
-                        .accept(MediaType.APPLICATION_JSON)
-                        .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA_VALUE)
-                        .body(newsData);
+                RequestEntity<Void> request = RequestEntity.delete(new URI(getHostURL() + "/news/" + document.get("id").toString()))
+                        .accept(MediaType.APPLICATION_JSON).build();
 
                 ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
 
-                if (response.getStatusCode() == HttpStatus.OK) {
-                    status.setText("Save Successful");
+                if (response.getStatusCode() == HttpStatus.NO_CONTENT) {
+                    status.setText("Document Deleted");
+                    docTitle.setText("");
+                    document = null;
+                    playground.setText("");
                 } else {
-                    status.setText("SAVE FAILURE!!!");
+                    JOptionPane.showMessageDialog(this, "Failed to delete document! Reason: " + response.getStatusCode());
                 }
 
             } catch (URISyntaxException e) {
-                e.printStackTrace();
+                JOptionPane.showMessageDialog(this, e.getMessage());
+            } catch (ResourceAccessException e) {
+                JOptionPane.showMessageDialog(this, e.getMessage());
             }
         } else {
             status.setText("Please load a document...");
@@ -534,15 +873,20 @@ public class Main extends javax.swing.JFrame {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JLabel docTitle;
+    private JLabel hostLabel;
+    private JTextField host;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JButton load;
-    private javax.swing.JButton train;
+    private javax.swing.JButton metadata;
+    private javax.swing.JButton trainNER;
     private javax.swing.JButton annotate;
     private javax.swing.JButton reset;
     private javax.swing.JButton find;
     private javax.swing.JTextPane playground;
     private javax.swing.JLabel status;
     private javax.swing.JButton save;
+    private javax.swing.JButton process;
+    private javax.swing.JButton delete;
     private JSlider slider;
     private JTextField type;
     // End of variables declaration//GEN-END:variables
