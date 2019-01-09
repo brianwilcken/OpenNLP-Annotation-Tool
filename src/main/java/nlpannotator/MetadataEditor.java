@@ -58,11 +58,7 @@ public class MetadataEditor extends JFrame {
         for (Map.Entry entry : document.entrySet()) {
             String key = entry.getKey().toString();
             Object value = entry.getValue();
-            if (value instanceof String) {
-                tableModel.addRow(new Object[]{key, value.toString()});
-            } else if (value instanceof List) {
-                tableModel.addRow(new Object[]{key, ((List) value).get(0).toString()});
-            }
+            tableModel.addRow(new Object[]{key, value.toString()});
         }
 
         documentTable.setModel(tableModel);

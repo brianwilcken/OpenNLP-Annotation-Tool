@@ -147,18 +147,20 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
     }
 
     private void loadDictionaryActionPerformed(ActionEvent evt) {
-        String category = annotator.getDocumentCategory();
-        String wordsText = Tools.getResource("dictionary/" + category + ".txt");
-        List<String> wordsList = Arrays.asList(wordsText.split("\\r\\n"));
-        int[] selections = lsFound.getSelectedIndices();
-        for (String entry : wordsList) {
-            String titleCaps = WordUtils.capitalizeFully(entry);
-            String allCaps = entry.toUpperCase();
-            selections = updateFoundSelections(entry, selections);
-            selections = updateFoundSelections(titleCaps, selections);
-            selections = updateFoundSelections(allCaps, selections);
+        List categories = annotator.getDocumentCategories();
+        for (Object category : categories) {
+            String wordsText = Tools.getResource("dictionary/" + category + ".txt");
+            List<String> wordsList = Arrays.asList(wordsText.split("\\r\\n"));
+            int[] selections = lsFound.getSelectedIndices();
+            for (String entry : wordsList) {
+                String titleCaps = WordUtils.capitalizeFully(entry);
+                String allCaps = entry.toUpperCase();
+                selections = updateFoundSelections(entry, selections);
+                selections = updateFoundSelections(titleCaps, selections);
+                selections = updateFoundSelections(allCaps, selections);
+            }
+            lsFound.setSelectedIndices(selections);
         }
-        lsFound.setSelectedIndices(selections);
     }
 
     private int[] updateFoundSelections(String entry, int[] selections) {

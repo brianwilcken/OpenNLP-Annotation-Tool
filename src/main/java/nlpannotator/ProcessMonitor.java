@@ -19,7 +19,7 @@ public class ProcessMonitor extends JFrame {
         populate();
 
         setTitle("Process Monitor");
-        //setLocation(annotatorUI.getLocationOnScreen());
+        setLocation(annotatorUI.getLocationOnScreen());
         setContentPane(panel1);
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
         pack();

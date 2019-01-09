@@ -79,7 +79,10 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
 
             DefaultListModel<String> docsModel = new DefaultListModel<>();
             for (Map document : documents) {
-                String displayText = document.get("filename").toString() + " (" + document.get("category").toString() + ")";
+                String displayText = document.get("filename").toString();
+                if (document.containsKey("category")) {
+                    displayText = document.get("filename").toString() + " (" + document.get("category").toString() + ")";
+                }
                 long created = Long.parseLong(document.get("created").toString());
                 long lastUpdated = Long.parseLong(document.get("lastUpdated").toString());
                 if (created == lastUpdated) {

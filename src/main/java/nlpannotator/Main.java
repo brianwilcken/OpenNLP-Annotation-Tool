@@ -3,6 +3,7 @@ package nlpannotator;
 import common.FacilityTypes;
 import common.SizedStack;
 import common.Tools;
+import org.apache.commons.lang.ArrayUtils;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -25,8 +26,11 @@ import java.util.*;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import javax.swing.*;
 import javax.swing.event.CaretEvent;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.text.*;
 import javax.swing.text.Highlighter.Highlight;
 
@@ -35,6 +39,8 @@ public class Main extends javax.swing.JFrame {
 
     ArrayList<Offset> coordinates;
     Map document;
+    private DefaultComboBoxModel doccatModel;
+
     private RestTemplate restTemplate;
     private ProcessMonitor processMonitor;
     private DocumentSelector documentSelector;
@@ -45,7 +51,6 @@ public class Main extends javax.swing.JFrame {
     public Main() {
         undoStates = new SizedStack<>(10);
         redoStates = new SizedStack<>(10);
-        processMonitor = new ProcessMonitor(this);
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         restTemplate = new RestTemplate(requestFactory);
         initComponents();
@@ -173,7 +178,7 @@ public class Main extends javax.swing.JFrame {
                 } else if ((e.getKeyCode() == KeyEvent.VK_Y) && ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0)) {
                     redo();
                 } else if ((e.getKeyCode() == KeyEvent.VK_P) && ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0)) {
-                    processMonitor.setVisible(true);
+                    getProcessMonitor().setVisible(true);
                 } else if (e.getKeyCode() == KeyEvent.VK_F3) {
                     Highlight[] highlights = playground.getHighlighter().getHighlights();
                     undoStates.push(playground.getText());
@@ -195,6 +200,9 @@ public class Main extends javax.swing.JFrame {
     }
 
     public ProcessMonitor getProcessMonitor() {
+        if (processMonitor == null) {
+            processMonitor = new ProcessMonitor(this);
+        }
         return processMonitor;
     }
 
@@ -235,10 +243,10 @@ public class Main extends javax.swing.JFrame {
         return annotationType;
     }
 
-    public String getDocumentCategory() {
-        String category = doccat.getSelectedItem().toString();
+    public List getDocumentCategories() {
+        List categories = doccat.getSelectedValuesList();
 
-        return category;
+        return categories;
     }
 
     public void highlightAnnotations() {
@@ -319,13 +327,13 @@ public class Main extends javax.swing.JFrame {
     }
 
     public void populateDocumentCategories() {
-        DefaultComboBoxModel model = new DefaultComboBoxModel();
+        doccatModel = new DefaultComboBoxModel();
 
         for (String key : FacilityTypes.dictionary.keySet()) {
-            model.addElement(key);
+            doccatModel.addElement(key);
         }
 
-        doccat.setModel(model);
+        doccat.setModel(doccatModel);
     }
 
     private void populateAnnotationTypes() {
@@ -363,7 +371,8 @@ public class Main extends javax.swing.JFrame {
         status = new javax.swing.JLabel();
         type = new JComboBox();
         populateAnnotationTypes();
-        doccat = new JComboBox();
+        doccat = new JList();
+        doccatPane = new JScrollPane();
         populateDocumentCategories();
         trainDoccat = new JButton();
 
@@ -392,6 +401,14 @@ public class Main extends javax.swing.JFrame {
         slider.setPaintTicks(true);
         slider.setPaintLabels(true);
         slider.setLabelTable(position);
+
+        doccat.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        doccat.setLayoutOrientation(JList.VERTICAL);
+        doccat.setVisibleRowCount(6);
+
+        doccatPane.setViewportView(doccat);
+        doccatPane.setPreferredSize(new Dimension(180, 100));
+        doccatPane.setMaximumSize(new Dimension(180, 100));
 
         playground.addKeyListener(new PlaygroundKeyListener());
 
@@ -511,7 +528,7 @@ public class Main extends javax.swing.JFrame {
                     .addComponent(trainNER)
                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 100, Short.MAX_VALUE)
                     .addComponent(doccatLblTag)
-                    .addComponent(doccat)
+                    .addComponent(doccatPane)
                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 10, Short.MAX_VALUE)
                     .addComponent(trainDoccat)
                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 100, Short.MAX_VALUE)
@@ -546,7 +563,7 @@ public class Main extends javax.swing.JFrame {
                             .addComponent(slider)
                             .addComponent(trainNER)
                             .addComponent(doccatLblTag)
-                            .addComponent(doccat)
+                            .addComponent(doccatPane)
                             .addComponent(trainDoccat)
                             .addComponent(reset)
                             .addComponent(find)
@@ -608,7 +625,10 @@ public class Main extends javax.swing.JFrame {
                             new ParameterizedTypeReference<HashMap<String, Object>>() {
                             };
 
-                    RequestEntity<Void> request = RequestEntity.get(new URI(getHostURL() + "/documents/trainNER" + "?category=" + document.get("category").toString() + "&doAsync=false"))
+                    List categories = (List)document.get("category");
+                    List<String> categoryList = (List<String>)categories.stream().map(category -> "category=" + category.toString()).collect(Collectors.toList());
+                    String categoryQuery = categoryList.stream().reduce((p1, p2) -> p1 + "&" + p2).orElse("");
+                    RequestEntity<Void> request = RequestEntity.get(new URI(getHostURL() + "/documents/trainNER" + "?" + categoryQuery + "&doAsync=false"))
                             .accept(MediaType.APPLICATION_JSON).build();
 
                     ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
@@ -743,7 +763,16 @@ public class Main extends javax.swing.JFrame {
         undoStates.empty();
         redoStates.empty();
         fileName.setText(document.get("filename").toString());
-        doccat.setSelectedItem(document.get("category").toString());
+
+        if (document.containsKey("category")) {
+            List categories = (List)document.get("category");
+            int[] selections = new int[0];
+            for (Object category : categories) {
+                int selected = doccatModel.getIndexOf(category);
+                selections = ArrayUtils.addAll(selections, new int[]{selected});
+            }
+            doccat.setSelectedIndices(selections);
+        }
         if (document.containsKey("annotated")) {
             playground.setText(document.get("annotated").toString());
         } else {
@@ -792,18 +821,19 @@ public class Main extends javax.swing.JFrame {
                     document.put("annotated", playground.getText());
                 }
 
-                document.replace("category", doccat.getSelectedItem().toString());
+                List categories = doccat.getSelectedValuesList();
+                if (document.containsKey("category")) {
+                    document.replace("category", categories);
+                } else {
+                    document.put("category", categories);
+                }
 
                 try {
-                    Map<String, String> doc = new HashMap<>();
+                    Map<String, Object> doc = new HashMap<>();
                     for (Object key : document.keySet()) {
                         String docKey = key.toString();
                         Object value = document.get(key);
-                        if (value instanceof java.util.List) {
-                            doc.put(docKey, ((java.util.List) value).get(0).toString());
-                        } else {
-                            doc.put(docKey, value.toString());
-                        }
+                        doc.put(docKey, value);
                     }
 
                     MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
@@ -1006,7 +1036,8 @@ public class Main extends javax.swing.JFrame {
     private javax.swing.JButton delete;
     private JSlider slider;
     private JComboBox type;
-    private JComboBox doccat;
+    private JList doccat;
+    private JScrollPane doccatPane;
     private JButton trainDoccat;
     // End of variables declaration//GEN-END:variables
 }
