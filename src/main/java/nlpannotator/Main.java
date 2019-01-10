@@ -44,6 +44,7 @@ public class Main extends javax.swing.JFrame {
     private RestTemplate restTemplate;
     private ProcessMonitor processMonitor;
     private DocumentSelector documentSelector;
+    private HistoryViewer historyViewer;
 
     private SizedStack<String> undoStates;
     private SizedStack<String> redoStates;
@@ -179,6 +180,8 @@ public class Main extends javax.swing.JFrame {
                     redo();
                 } else if ((e.getKeyCode() == KeyEvent.VK_P) && ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0)) {
                     getProcessMonitor().setVisible(true);
+                } else if ((e.getKeyCode() == KeyEvent.VK_H) && ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0)) {
+                    showHistoryViewer();
                 } else if (e.getKeyCode() == KeyEvent.VK_F3) {
                     Highlight[] highlights = playground.getHighlighter().getHighlights();
                     undoStates.push(playground.getText());
@@ -196,6 +199,16 @@ public class Main extends javax.swing.JFrame {
         @Override
         public void keyReleased(KeyEvent e) {
 
+        }
+    }
+
+    public void showHistoryViewer() {
+        if (document != null) {
+            if (historyViewer == null) {
+                historyViewer = new HistoryViewer(this);
+            }
+            historyViewer.populate(document);
+            historyViewer.setVisible(true);
         }
     }
 
@@ -759,6 +772,13 @@ public class Main extends javax.swing.JFrame {
         this.document = doc;
     }
 
+    public void updateAnnotation(String annotated) {
+        int caretPos = playground.getCaretPosition();
+        document.replace("annotated", annotated);
+        loadDocument(document);
+        playground.setCaretPosition(caretPos);
+    }
+
     public void loadDocument(Map document) {
         undoStates.empty();
         redoStates.empty();
@@ -826,6 +846,13 @@ public class Main extends javax.swing.JFrame {
                     document.replace("category", categories);
                 } else {
                     document.put("category", categories);
+                }
+
+                String annotatedBy = System.getProperty("user.name");
+                if (document.containsKey("annotatedBy")) {
+                    document.replace("annotatedBy", annotatedBy);
+                } else {
+                    document.put("annotatedBy", annotatedBy);
                 }
 
                 try {
