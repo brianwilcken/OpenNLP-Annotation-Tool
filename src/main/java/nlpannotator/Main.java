@@ -1,5 +1,6 @@
 package nlpannotator;
 
+import com.google.common.base.Strings;
 import common.FacilityTypes;
 import common.SizedStack;
 import common.Tools;
@@ -28,9 +29,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.swing.*;
-import javax.swing.event.CaretEvent;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import javax.swing.text.*;
 import javax.swing.text.Highlighter.Highlight;
 
@@ -45,6 +43,7 @@ public class Main extends javax.swing.JFrame {
     private ProcessMonitor processMonitor;
     private DocumentSelector documentSelector;
     private HistoryViewer historyViewer;
+    private AutoDetectionThreshold autoDetectionThreshold;
 
     private SizedStack<String> undoStates;
     private SizedStack<String> redoStates;
@@ -57,18 +56,55 @@ public class Main extends javax.swing.JFrame {
         initComponents();
     }
 
+    private boolean validateAnnotation(int start, int end, Document doc) {
+        try {
+            Pattern lineBreakPattern = Pattern.compile("(\\n|\\r)");
+
+            //valid annotations may not be multi-sentence
+            String text = doc.getText(start, end - start);
+            if (lineBreakPattern.matcher(text).find()) {
+                return false;
+            }
+
+            //valid annotations must begin and end with complete words
+            Pattern wordBreakPattern = Pattern.compile("(\\W|\\s)");
+            if (start > 0 && end < doc.getLength() - 1) {
+                String prevChar = doc.getText(start - 1, 1);
+                String postChar = doc.getText(end, 1);
+
+                return wordBreakPattern.matcher(prevChar).matches() && wordBreakPattern.matcher(postChar).matches();
+            } else if (start == 0 && end < doc.getLength() - 1) {
+                String postChar = doc.getText(end, 1);
+
+                return wordBreakPattern.matcher(postChar).matches();
+            } else if (start > 0 && end == doc.getLength() - 1) {
+                String prevChar = doc.getText(start - 1, 1);
+
+                return wordBreakPattern.matcher(prevChar).matches();
+            } else {
+                return false;
+            }
+        } catch (BadLocationException e) {
+            return false;
+        }
+    }
+
     private void annotateSingle(Highlight[] highlights) {
         for (Highlight highlight : highlights) {
             Document doc = playground.getDocument();
             int start = highlight.getStartOffset();
             int end = highlight.getEndOffset();
 
-            String annotation = getAnnotation();
-            try {
-                doc.insertString(start, annotation, null);
-                doc.insertString(end + annotation.length(), " <END> ", null);
-            } catch (BadLocationException e1) {
-                e1.printStackTrace();
+            if (validateAnnotation(start, end, doc)) {
+                String annotation = getAnnotation();
+                try {
+                    doc.insertString(start, annotation, null);
+                    doc.insertString(end + annotation.length(), " <END> ", null);
+                } catch (BadLocationException e1) {
+                    e1.printStackTrace();
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Annotation is not valid!");
             }
         }
         removeHighlights();
@@ -82,16 +118,20 @@ public class Main extends javax.swing.JFrame {
             int start = highlight.getStartOffset();
             int end = highlight.getEndOffset();
 
-            String annotation = getAnnotation();
-            try {
-                int caretPos = playground.getCaretPosition();
-                String selectedText = doc.getText(start, end - start);
-                String annotated = doc.getText(0, doc.getLength()).replaceAll(selectedText, annotation + selectedText + " <END> ");
-                doc.remove(0, doc.getLength());
-                doc.insertString(0, annotated, null);
-                playground.setCaretPosition(caretPos);
-            } catch (BadLocationException e1) {
-                e1.printStackTrace();
+            if (validateAnnotation(start, end, doc)) {
+                String annotation = getAnnotation();
+                try {
+                    int caretPos = playground.getCaretPosition();
+                    String selectedText = doc.getText(start, end - start);
+                    String annotated = doc.getText(0, doc.getLength()).replaceAll(selectedText, annotation + selectedText + " <END> ");
+                    doc.remove(0, doc.getLength());
+                    doc.insertString(0, annotated, null);
+                    playground.setCaretPosition(caretPos);
+                } catch (BadLocationException e1) {
+                    e1.printStackTrace();
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Annotation is not valid!");
             }
         }
         removeHighlights();
@@ -182,6 +222,14 @@ public class Main extends javax.swing.JFrame {
                     getProcessMonitor().setVisible(true);
                 } else if ((e.getKeyCode() == KeyEvent.VK_H) && ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0)) {
                     showHistoryViewer();
+                } else if ((e.getKeyCode() == KeyEvent.VK_M) && ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0)) {
+                    showMetadataEditor();
+                } else if ((e.getKeyCode() == KeyEvent.VK_D) && ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0)) {
+                    deleteDocument();
+                } else if ((e.getKeyCode() == KeyEvent.VK_R) && ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0)) {
+                    resetDocument();
+                } else if ((e.getKeyCode() == KeyEvent.VK_N) && ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0)) {
+                    showAutoDetectionThreshold();
                 } else if (e.getKeyCode() == KeyEvent.VK_F3) {
                     Highlight[] highlights = playground.getHighlighter().getHighlights();
                     undoStates.push(playground.getText());
@@ -192,6 +240,10 @@ public class Main extends javax.swing.JFrame {
                     undoStates.push(playground.getText());
                     //F4 Key - remove annotation from all elements
                     unannotateMultiple(highlights);
+                } else if (e.getKeyCode() == KeyEvent.VK_F5) {
+                    trainNERModelActionPerformed(null);
+                } else if (e.getKeyCode() == KeyEvent.VK_F6) {
+                    trainDoccatModelActionPerformed(null);
                 }
             }
         }
@@ -199,6 +251,15 @@ public class Main extends javax.swing.JFrame {
         @Override
         public void keyReleased(KeyEvent e) {
 
+        }
+    }
+
+    public void showAutoDetectionThreshold() {
+        if (document != null) {
+            if (autoDetectionThreshold == null) {
+                autoDetectionThreshold = new AutoDetectionThreshold(this);
+            }
+            autoDetectionThreshold.setVisible(true);
         }
     }
 
@@ -366,28 +427,22 @@ public class Main extends javax.swing.JFrame {
     @SuppressWarnings("unchecked")
     private void initComponents() {
 
+        setTitleFilename("");
+
         jScrollPane1 = new javax.swing.JScrollPane();
         playground = new javax.swing.JTextPane();
+        playground.setEditable(false);
         load = new javax.swing.JButton();
-        metadata = new javax.swing.JButton();
-        trainNER = new javax.swing.JButton();
-        annotate = new javax.swing.JButton();
-        reset = new javax.swing.JButton();
-        find = new javax.swing.JButton();
         save = new javax.swing.JButton();
         process = new javax.swing.JButton();
         download = new javax.swing.JButton();
-        delete = new javax.swing.JButton();
-        fileName = new javax.swing.JLabel();
         hostLabel = new JLabel();
         host = new JTextField();
-        status = new javax.swing.JLabel();
         type = new JComboBox();
         populateAnnotationTypes();
         doccat = new JList();
         doccatPane = new JScrollPane();
         populateDocumentCategories();
-        trainDoccat = new JButton();
 
         JLabel annotationLblTag = new JLabel();
         annotationLblTag.setText("Annotation Tag:");
@@ -397,23 +452,6 @@ public class Main extends javax.swing.JFrame {
 
         hostLabel.setText("Host:");
         host.setText(Tools.getProperty("restApi.url"));
-
-        DefaultBoundedRangeModel model = new DefaultBoundedRangeModel(50, 0, 1, 100);
-        slider = new JSlider(model);
-        slider.setOrientation(JSlider.HORIZONTAL);
-
-        Hashtable position = new Hashtable();
-        position.put(0, new JLabel("0"));
-        position.put(25, new JLabel("25"));
-        position.put(50, new JLabel("50"));
-        position.put(75, new JLabel("75"));
-        position.put(100, new JLabel("100"));
-
-        slider.setMajorTickSpacing(25);
-        slider.setMinorTickSpacing(5);
-        slider.setPaintTicks(true);
-        slider.setPaintLabels(true);
-        slider.setLabelTable(position);
 
         doccat.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         doccat.setLayoutOrientation(JList.VERTICAL);
@@ -434,48 +472,6 @@ public class Main extends javax.swing.JFrame {
         load.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 loadActionPerformed(evt);
-            }
-        });
-
-        metadata.setText("Metadata");
-        metadata.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                metadataPerformed(evt);
-            }
-        });
-
-        trainNER.setText("Train NER Model");
-        trainNER.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                trainNERModelActionPerformed(evt);
-            }
-        });
-
-        trainDoccat.setText("Train DocCat Model");
-        trainDoccat.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                trainDoccatModelActionPerformed(evt);
-            }
-        });
-
-        annotate.setText("Auto Detect NER");
-        annotate.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                autoAnnotateActionPerformed(evt);
-            }
-        });
-
-        reset.setText("Reset");
-        reset.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                resetActionPerformed(evt);
-            }
-        });
-
-        find.setText("Find/Replace");
-        find.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                findActionPerformed(evt);
             }
         });
 
@@ -500,21 +496,12 @@ public class Main extends javax.swing.JFrame {
             }
         });
 
-        delete.setText("Delete Document");
-        delete.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                deleteActionPerformed(evt);
-            }
-        });
-
         type.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
                 highlightActionPerformed(actionEvent);
             }
         });
-
-        status.setText("Status:");
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -523,41 +510,22 @@ public class Main extends javax.swing.JFrame {
             .addComponent(jScrollPane1)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                     .addGap(2, 2, 2)
-                    .addComponent(fileName, javax.swing.GroupLayout.PREFERRED_SIZE, 240, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGap(18, 18, 18)
                     .addComponent(hostLabel)
                     .addComponent(host)
                     .addComponent(load)
-                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 20, Short.MAX_VALUE)
-                    .addComponent(metadata)
                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 100, Short.MAX_VALUE)
                     .addComponent(annotationLblTag)
                     .addComponent(type)
                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 10, Short.MAX_VALUE)
-                    .addComponent(annotate)
-                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 5, Short.MAX_VALUE)
-                    .addComponent(slider)
-                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 10, Short.MAX_VALUE)
-                    .addComponent(trainNER)
-                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 100, Short.MAX_VALUE)
                     .addComponent(doccatLblTag)
                     .addComponent(doccatPane)
-                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 10, Short.MAX_VALUE)
-                    .addComponent(trainDoccat)
-                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 100, Short.MAX_VALUE)
-                    .addComponent(reset)
-                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 20, Short.MAX_VALUE)
-                    .addComponent(find)
                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 60, Short.MAX_VALUE)
-                    .addComponent(status, javax.swing.GroupLayout.PREFERRED_SIZE, 260, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                     .addComponent(save)
                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 5, Short.MAX_VALUE)
                     .addComponent(process)
                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 5, Short.MAX_VALUE)
                     .addComponent(download)
-                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 5, Short.MAX_VALUE)
-                    .addComponent(delete)
                     .addGap(29, 29, 29))
         );
         layout.setVerticalGroup(
@@ -569,23 +537,13 @@ public class Main extends javax.swing.JFrame {
                             .addComponent(hostLabel)
                             .addComponent(host)
                             .addComponent(load)
-                            .addComponent(metadata)
                             .addComponent(annotationLblTag)
                             .addComponent(type)
-                            .addComponent(annotate)
-                            .addComponent(slider)
-                            .addComponent(trainNER)
                             .addComponent(doccatLblTag)
                             .addComponent(doccatPane)
-                            .addComponent(trainDoccat)
-                            .addComponent(reset)
-                            .addComponent(find)
                             .addComponent(save)
                             .addComponent(process)
-                            .addComponent(download)
-                            .addComponent(delete)
-                            .addComponent(fileName, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(status, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                            .addComponent(download)))
                     .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                     .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 480, Short.MAX_VALUE)
             )
@@ -646,10 +604,8 @@ public class Main extends javax.swing.JFrame {
 
                     ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
 
-                    if (response.getStatusCode() == HttpStatus.OK) {
-                        status.setText("NER Model Training Completed");
-                    } else {
-                        status.setText("SERVER ERROR!!!");
+                    if (response.getStatusCode() != HttpStatus.OK) {
+                        JOptionPane.showMessageDialog(this, "Server error has occurred!!");
                     }
                 } catch (URISyntaxException e) {
                     JOptionPane.showMessageDialog(this, e.getMessage());
@@ -683,9 +639,8 @@ public class Main extends javax.swing.JFrame {
                 if (response.getStatusCode() == HttpStatus.OK) {
                     double accuracy = (double)response.getBody().get("data");
                     JOptionPane.showMessageDialog(this, "Model accuracy: " + accuracy);
-                    status.setText("DocCat Model Training Completed");
                 } else {
-                    status.setText("SERVER ERROR!!!");
+                    JOptionPane.showMessageDialog(this, "Server error has occurred!!");
                 }
             } catch (URISyntaxException e) {
                 JOptionPane.showMessageDialog(this, e.getMessage());
@@ -700,7 +655,7 @@ public class Main extends javax.swing.JFrame {
 
     }
 
-    private void resetActionPerformed(ActionEvent evt) {
+    private void resetDocument() {
         if (document != null) {
             undoStates.empty();
             redoStates.empty();
@@ -708,17 +663,15 @@ public class Main extends javax.swing.JFrame {
             playground.setCaretPosition(0);
             highlightAnnotations();
         } else {
-            status.setText("Please load a document...");
+            JOptionPane.showMessageDialog(this, "Please load a document...");
         }
     }
 
-    private void autoAnnotateActionPerformed(ActionEvent evt) {
+    public void autoAnnotateDocument(int threshold) {
         if (document != null) {
             undoStates.empty();
             redoStates.empty();
             try {
-                int threshold = slider.getValue();
-
                 ParameterizedTypeReference<HashMap<String, Object>> responseType =
                         new ParameterizedTypeReference<HashMap<String, Object>>() {};
 
@@ -740,16 +693,12 @@ public class Main extends javax.swing.JFrame {
                 JOptionPane.showMessageDialog(this, e.getMessage());
             }
         } else {
-            status.setText("Please load a document...");
+            JOptionPane.showMessageDialog(this, "Please load a document...");
         }
     }
 
     public String getHostURL() {
         return host.getText();
-    }
-
-    public void setStatusText(String text) {
-        status.setText(text);
     }
 
     public void loadActionPerformed(java.awt.event.ActionEvent evt) {
@@ -761,7 +710,7 @@ public class Main extends javax.swing.JFrame {
         }
     }
 
-    private void metadataPerformed(java.awt.event.ActionEvent evt) {
+    private void showMetadataEditor() {
         if (document != null) {
             MetadataEditor editor = new MetadataEditor(this);
             editor.populate(document);
@@ -788,7 +737,7 @@ public class Main extends javax.swing.JFrame {
     public void loadDocument(Map document) {
         undoStates.empty();
         redoStates.empty();
-        fileName.setText(document.get("filename").toString());
+        setTitleFilename(document.get("filename").toString());
 
         if (document.containsKey("category")) {
             List categories = (List)document.get("category");
@@ -805,7 +754,6 @@ public class Main extends javax.swing.JFrame {
             playground.setText(document.get("parsed").toString());
         }
         playground.setCaretPosition(0);
-        status.setText("Status: File loaded");
         this.document = document;
         removeHighlights();
         highlightAnnotations();
@@ -885,14 +833,14 @@ public class Main extends javax.swing.JFrame {
 
                     if (response.getStatusCode() == HttpStatus.OK) {
                         if (doNLP) {
-                            status.setText("Document Processing Complete");
+                            JOptionPane.showMessageDialog(this, "Document Processing Complete");
                         } else {
-                            status.setText("Save Successful");
+                            JOptionPane.showMessageDialog(this, "Save Successful");
                         }
                         reloadHistory();
                         documentSelector.populate();
                     } else {
-                        status.setText("SAVE FAILURE!!!");
+                        JOptionPane.showMessageDialog(this, "SAVE FAILURE!!!");
                     }
 
                 } catch (URISyntaxException e) {
@@ -904,7 +852,7 @@ public class Main extends javax.swing.JFrame {
                 }
             }).start();
         } else {
-            status.setText("Please load a document...");
+            JOptionPane.showMessageDialog(this, "Please load a document...");
         }
     }
 
@@ -935,7 +883,7 @@ public class Main extends javax.swing.JFrame {
                 JOptionPane.showMessageDialog(this, e.getMessage());
             }
         } else {
-            status.setText("Please load a document...");
+            JOptionPane.showMessageDialog(this, "Please load a document...");
         }
     }
 
@@ -955,8 +903,8 @@ public class Main extends javax.swing.JFrame {
         }
     }
 
-    private void deleteActionPerformed(ActionEvent evt) {
-        if (document != null && JOptionPane.showConfirmDialog(this, "Are you sure?") == 0) {
+    private void deleteDocument() {
+        if (document != null && JOptionPane.showConfirmDialog(this, "Are you sure you want to delete the document (this action cannot be undone)?") == 0) {
             undoStates.empty();
             redoStates.empty();
             try {
@@ -969,8 +917,8 @@ public class Main extends javax.swing.JFrame {
                 ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
 
                 if (response.getStatusCode() == HttpStatus.NO_CONTENT) {
-                    status.setText("Document Deleted");
-                    fileName.setText("");
+                    JOptionPane.showMessageDialog(this, "Document Deleted");
+                    setTitleFilename("");
                     document = null;
                     playground.setText("");
                     documentSelector.populate();
@@ -983,39 +931,15 @@ public class Main extends javax.swing.JFrame {
             } catch (ResourceAccessException e) {
                 JOptionPane.showMessageDialog(this, e.getMessage());
             }
-        } else {
-            status.setText("Please load a document...");
         }
     }
 
-    private void eventListeners() {
-        coordinates = new ArrayList();
-
-        playground.addCaretListener((CaretEvent e) -> {
-            Highlight[] h = playground.getHighlighter().getHighlights();
-            for (Highlight h1 : h) {
-
-                int start = h1.getStartOffset();
-                int end = h1.getEndOffset();
-
-                Offset offset = new Offset(start, end);
-                if (coordinates.contains(offset)) { //in case people needs to remove annotation
-                    coordinates.remove(offset);
-                    status.setText("Status: Word Removed");
-                    //style.setCharacterAttributes(start, (end - start), black, false);
-                } else {
-                    coordinates = Util.overlapsAdd(offset, coordinates);
-                    status.setText("Status: Word added");
-                    //style.setCharacterAttributes(start, (end - start), red, true);
-                }
-
-                System.out.println(h1.getStartOffset());
-                System.out.println(h1.getEndOffset());
-                Util.refreshColor(playground);
-                Util.colorIt(coordinates,playground);
-            }
-        });
-
+    private void setTitleFilename(String filename) {
+        if (!Strings.isNullOrEmpty(filename)) {
+            this.setTitle("Annotation Tool: " + filename);
+        } else {
+            this.setTitle("Annotation Tool");
+        }
     }
 
     public static void main(String args[]) {
@@ -1052,26 +976,16 @@ public class Main extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JLabel fileName;
     private JLabel hostLabel;
     private JTextField host;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JButton load;
-    private javax.swing.JButton metadata;
-    private javax.swing.JButton trainNER;
-    private javax.swing.JButton annotate;
-    private javax.swing.JButton reset;
-    private javax.swing.JButton find;
     private javax.swing.JTextPane playground;
-    private javax.swing.JLabel status;
     private javax.swing.JButton save;
     private javax.swing.JButton process;
     private javax.swing.JButton download;
-    private javax.swing.JButton delete;
-    private JSlider slider;
     private JComboBox type;
     private JList doccat;
     private JScrollPane doccatPane;
-    private JButton trainDoccat;
     // End of variables declaration//GEN-END:variables
 }
