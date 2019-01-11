@@ -20,12 +20,9 @@
         </properties>
         <border type="none"/>
         <children>
-          <component id="9ee2e" class="javax.swing.JList" binding="list1" default-binding="true">
+          <component id="1c8e2" class="javax.swing.JTable" binding="table1" default-binding="true">
             <constraints/>
-            <properties>
-              <layoutOrientation value="0"/>
-              <selectionMode value="0"/>
-            </properties>
+            <properties/>
           </component>
         </children>
       </scrollpane>

@@ -47,10 +47,10 @@ public class HistoryViewer extends JFrame {
     private void initListeners() {
         table1.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
             public void valueChanged(ListSelectionEvent event) {
-                // do some actions here, for example
-                // print first column value from selected row
-                String historyId = table1.getModel().getValueAt(table1.getSelectedRow(), 0).toString();
-                loadDocumentHistory(historyId);
+                if (table1.getSelectedRow() != -1) {
+                    String historyId = table1.getModel().getValueAt(table1.getSelectedRow(), 0).toString();
+                    loadDocumentHistory(historyId);
+                }
             }
         });
     }

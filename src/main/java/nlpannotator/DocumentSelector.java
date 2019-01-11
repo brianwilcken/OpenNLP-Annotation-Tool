@@ -16,6 +16,7 @@ import org.springframework.web.client.RestTemplate;
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -36,6 +37,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
     private JTextField textField1;
     private JButton loadURLButton;
     private JButton crawlURLButton;
+    private JTable table1;
     private List<Map<String, Object>> documents;
     private Main annotatorUI;
     private FileDrop fileDrop;
@@ -66,7 +68,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
                     new ParameterizedTypeReference<HashMap<String, Object>>() {
                     };
 
-            RequestEntity<Void> request = RequestEntity.get(new URI(annotatorUI.getHostURL() + "/documents?docText=*&fields=id&fields=filename&fields=category&fields=created&fields=lastUpdated"))
+            RequestEntity<Void> request = RequestEntity.get(new URI(annotatorUI.getHostURL() + "/documents?docText=*&fields=id&fields=filename&fields=category&fields=created&fields=lastUpdated&fields=annotatedBy"))
                     .accept(MediaType.APPLICATION_JSON).build();
 
             ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
@@ -77,24 +79,37 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
 
             Collections.sort(documents, Tools.documentComparator);
 
-            DefaultListModel<String> docsModel = new DefaultListModel<>();
-            for (Map document : documents) {
-                String displayText = document.get("filename").toString();
-                if (document.containsKey("category")) {
-                    displayText = document.get("filename").toString() + " (" + document.get("category").toString() + ")";
-                }
-                long created = Long.parseLong(document.get("created").toString());
-                long lastUpdated = Long.parseLong(document.get("lastUpdated").toString());
+            DefaultTableModel tableModel = new DefaultTableModel();
+            tableModel.addColumn("ID");
+            tableModel.addColumn("Filename");
+            tableModel.addColumn("Category");
+            tableModel.addColumn("Last Updated");
+            tableModel.addColumn("Updated By");
+
+            for (Map doc : documents) {
+                String id = doc.get("id").toString();
+                String filename = doc.get("filename").toString();
+                String category = doc.containsKey("category") ? doc.get("category").toString() : "";
+                long created = Long.parseLong(doc.get("created").toString());
+                long lastUpdated = Long.parseLong(doc.get("lastUpdated").toString());
+                String lastUpdatedStr = Tools.getFormattedDateTimeString(Instant.ofEpochMilli((long) doc.get("lastUpdated")));
                 if (created == lastUpdated) {
-                    displayText = "*" + displayText;
+                    lastUpdatedStr = "NEW: " + lastUpdatedStr;
                 }
-                docsModel.addElement(displayText);
+                String annotatedBy = "";
+                if (doc.containsKey("annotatedBy")) {
+                    annotatedBy = ((List) doc.get("annotatedBy")).get(0).toString();
+                }
+
+                tableModel.addRow(new Object[]{id, filename, category, lastUpdatedStr, annotatedBy});
             }
 
-            list1.setModel(docsModel);
-            list1.setSelectionMode(ListSelectionModel.SINGLE_INTERVAL_SELECTION);
-            list1.setLayoutOrientation(JList.HORIZONTAL_WRAP);
-            list1.setVisibleRowCount(-1);
+            table1.setModel(tableModel);
+
+            table1.getColumnModel().removeColumn(table1.getColumn("ID"));
+            table1.setDefaultEditor(Object.class, null);
+            table1.setAutoCreateRowSorter(true);
+            table1.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
 
             scrollPane1.setPreferredSize(new Dimension(400, 200));
         } catch (URISyntaxException e) {
@@ -105,9 +120,9 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
     }
 
     private void addEventListeners() {
-        list1.addListSelectionListener(this);
+        table1.getSelectionModel().addListSelectionListener(this);
 
-        fileDrop = new FileDrop(list1, new FileDrop.Listener() {
+        fileDrop = new FileDrop(table1, new FileDrop.Listener() {
             @Override
             public void filesDropped(File[] files) {
                 uploadFiles(files);
@@ -242,10 +257,8 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
         scrollPane1 = new JScrollPane();
         scrollPane1.setHorizontalScrollBarPolicy(30);
         panel1.add(scrollPane1, new GridConstraints(2, 0, 1, 5, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(800, 600), new Dimension(800, 600), null, 0, false));
-        list1 = new JList();
-        list1.setLayoutOrientation(0);
-        list1.setSelectionMode(0);
-        scrollPane1.setViewportView(list1);
+        table1 = new JTable();
+        scrollPane1.setViewportView(table1);
         final JLabel label1 = new JLabel();
         label1.setText("Resource URL:");
         panel1.add(label1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -307,10 +320,8 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
     @Override
     public void valueChanged(ListSelectionEvent listSelectionEvent) {
         try {
-            int index = list1.getSelectedIndex();
-            if (index > -1) {
-                Map doc = documents.get(index);
-                String id = doc.get("id").toString();
+            if (table1.getSelectedRow() != -1) {
+                String id = table1.getModel().getValueAt(table1.getSelectedRow(), 0).toString();
 
                 ParameterizedTypeReference<HashMap<String, Object>> responseType =
                         new ParameterizedTypeReference<HashMap<String, Object>>() {
@@ -325,6 +336,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
 
                 List<Map<String, Object>> document = ((List<Map<String, Object>>) jsonDict.get("data"));
 
+                annotatorUI.reloadHistory();
                 annotatorUI.loadDocument(document.get(0));
             }
         } catch (URISyntaxException e) {

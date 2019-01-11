@@ -779,6 +779,12 @@ public class Main extends javax.swing.JFrame {
         playground.setCaretPosition(caretPos);
     }
 
+    public void reloadHistory() {
+        if (historyViewer != null && historyViewer.isVisible()) {
+            historyViewer.populate(document);
+        }
+    }
+
     public void loadDocument(Map document) {
         undoStates.empty();
         redoStates.empty();
@@ -883,6 +889,7 @@ public class Main extends javax.swing.JFrame {
                         } else {
                             status.setText("Save Successful");
                         }
+                        reloadHistory();
                         documentSelector.populate();
                     } else {
                         status.setText("SAVE FAILURE!!!");
