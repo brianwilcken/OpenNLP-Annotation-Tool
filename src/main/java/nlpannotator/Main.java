@@ -18,6 +18,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
@@ -861,25 +862,33 @@ public class Main extends javax.swing.JFrame {
             try {
                 String filename = document.get("filename").toString();
                 final Path path = getSavePath(filename);
-
                 if (path != null) {
-                    RequestCallback requestCallback = request -> request.getHeaders()
-                            .setAccept(Arrays.asList(MediaType.APPLICATION_OCTET_STREAM, MediaType.ALL));
-
-                    ResponseExtractor<Void> responseExtractor = response -> {
-                        Files.copy(response.getBody(), path);
+                    if (path.toFile().exists()) {
                         if (Desktop.isDesktopSupported()) {
                             File file = path.toFile();
                             Desktop.getDesktop().open(file);
                         }
-                        return null;
-                    };
+                    } else {
+                        RequestCallback requestCallback = request -> request.getHeaders()
+                                .setAccept(Arrays.asList(MediaType.APPLICATION_OCTET_STREAM, MediaType.ALL));
 
-                    restTemplate.execute(new URI(getHostURL() + "/documents/" + document.get("docStoreId").toString()), HttpMethod.GET, requestCallback, responseExtractor);
+                        ResponseExtractor<Void> responseExtractor = response -> {
+                            Files.copy(response.getBody(), path);
+                            if (Desktop.isDesktopSupported()) {
+                                File file = path.toFile();
+                                Desktop.getDesktop().open(file);
+                            }
+                            return null;
+                        };
+
+                        restTemplate.execute(new URI(getHostURL() + "/documents/" + document.get("docStoreId").toString()), HttpMethod.GET, requestCallback, responseExtractor);
+                    }
                 }
             } catch (URISyntaxException e) {
                 JOptionPane.showMessageDialog(this, e.getMessage());
             } catch (ResourceAccessException e) {
+                JOptionPane.showMessageDialog(this, e.getMessage());
+            } catch (IOException e) {
                 JOptionPane.showMessageDialog(this, e.getMessage());
             }
         } else {
