@@ -459,8 +459,7 @@ public class Main extends javax.swing.JFrame {
 
     private void highlightFound() {
         if (findAndReplace != null) {
-            TreeMap<Integer, String> locMap = findAndReplace.getLocationMap();
-            highlightFound(locMap);
+            findAndReplace.valueChanged(null);
         }
     }
 
