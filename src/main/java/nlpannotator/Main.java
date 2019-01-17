@@ -45,6 +45,7 @@ public class Main extends javax.swing.JFrame {
     private DocumentSelector documentSelector;
     private HistoryViewer historyViewer;
     private AutoDetectionThreshold autoDetectionThreshold;
+    private AnnotatedLinesTracker annotatedLinesTracker;
 
     private SizedStack<String> undoStates;
     private SizedStack<String> redoStates;
@@ -161,6 +162,7 @@ public class Main extends javax.swing.JFrame {
                 e1.printStackTrace();
             }
         }
+        updateAnnotatedLinesList();
     }
 
     private void unannotateMultiple(Highlight[] highlights) {
@@ -190,6 +192,32 @@ public class Main extends javax.swing.JFrame {
         removeHighlights();
         highlightAnnotations();
         highlightFound();
+    }
+
+    public void updateAnnotatedLinesList() {
+        AnnotatedLinesTracker tracker = getAnnotatedLinesTracker();
+        String annotationTarget = "<END>";
+        if(tracker.inSelectedAnnotationMode()) {
+            annotationTarget = getAnnotation();
+        }
+        String[] allLines = playground.getText().split(System.lineSeparator());
+
+        TreeMap<Integer, String> annotatedLines = new TreeMap<>();
+        for (int i = 0; i < allLines.length; i++) {
+            if (allLines[i].contains(annotationTarget)) {
+                annotatedLines.put(i, allLines[i]);
+            }
+        }
+
+        tracker.update(annotatedLines);
+        tracker.setVisible(true);
+    }
+
+    private AnnotatedLinesTracker getAnnotatedLinesTracker() {
+        if (annotatedLinesTracker == null) {
+            annotatedLinesTracker = new AnnotatedLinesTracker(this);
+        }
+        return annotatedLinesTracker;
     }
 
     private class PlaygroundKeyListener implements KeyListener {
@@ -328,10 +356,77 @@ public class Main extends javax.swing.JFrame {
         highlightText(getAnnotation(), true, Color.BLUE, null);
         String endAnnotation = " <END> ";
         highlightText(endAnnotation, true, Color.RED, null);
+        updateAnnotatedLinesList();
+    }
+
+    public void highlightFound(TreeMap<Integer, String> locMap) {
+        if (locMap != null) {
+            highlightText(locMap, true, Color.GREEN, Color.BLACK);
+        }
+    }
+
+    public void navigatePrevious(TreeMap<Integer, String> locMap) {
+        Integer prev = null;
+        int caret = playground.getCaretPosition();
+        if (locMap.size() > 0) {
+            prev = locMap.lowerKey(caret);
+            if (prev == null) {
+                prev = locMap.lastKey();
+            }
+            playground.setCaretPosition(prev);
+        }
+    }
+
+    public void navigateNext(TreeMap<Integer, String> locMap) {
+        Integer next = null;
+        int caret = playground.getCaretPosition();
+        if (locMap.size() > 0) {
+            next = locMap.higherKey(caret);
+            if (next == null) {
+                next = locMap.firstKey();
+            }
+            playground.setCaretPosition(next);
+        }
+    }
+
+    public void navigateToLine(String line) {
+        Document doc = playground.getDocument();
+        try {
+            String text = doc.getText(0, doc.getLength());
+            int index = text.indexOf(line);
+            playground.setCaretPosition(index);
+        } catch (BadLocationException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public TreeMap<Integer, String> getLocationMap(List foundList) {
+        Document doc = playground.getDocument();
+        TreeMap<Integer, String> locMap = new TreeMap<>();
+        try {
+            String text = doc.getText(0, doc.getLength());
+            for (Object obj : foundList) {
+                String found = obj.toString();
+                int index = text.indexOf(found);
+                while (index >= 0) {
+                    locMap.put(index, found);
+                    index = text.indexOf(found, index + 1);
+                }
+            }
+            return locMap;
+        } catch (BadLocationException e) {
+            return null;
+        }
+    }
+
+    private void highlightText(TreeMap<Integer, String> locMap, Boolean isBold, Color foreColor, Color backColor) {
+        for (int index : locMap.keySet()) {
+            int len = locMap.get(index).length();
+            applyTextStyle(index, len, isBold, foreColor, backColor);
+        }
     }
 
     private void highlightText(String str, Boolean isBold, Color foreColor, Color backColor) {
-        StyledDocument style = playground.getStyledDocument();
         Document doc = playground.getDocument();
         try {
             String text = doc.getText(0, doc.getLength());
@@ -362,16 +457,10 @@ public class Main extends javax.swing.JFrame {
         }
     }
 
-    public void highlightFound(List found) {
-        for (Object str : found) {
-            highlightText((String)str, true, Color.GREEN, Color.BLACK);
-        }
-    }
-
     private void highlightFound() {
         if (findAndReplace != null) {
-            List selections = findAndReplace.getListSelections();
-            highlightFound(selections);
+            TreeMap<Integer, String> locMap = findAndReplace.getLocationMap();
+            highlightFound(locMap);
         }
     }
 
@@ -754,10 +843,15 @@ public class Main extends javax.swing.JFrame {
         } else {
             playground.setText(document.get("parsed").toString());
         }
+
         playground.setCaretPosition(0);
         this.document = document;
         removeHighlights();
         highlightAnnotations();
+
+        if (findAndReplace != null) {
+            findAndReplace.reset();
+        }
     }
 
     private boolean validateForSave() {
