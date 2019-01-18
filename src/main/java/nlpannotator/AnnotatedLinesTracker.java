@@ -10,16 +10,21 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class AnnotatedLinesTracker extends JFrame {
-    private JTable annotatedLines;
+    private JTable annotatedLinesTable;
     private JPanel panel1;
     private JCheckBox onlyShowSelectedAnnotationsCheckBox;
+    private JTable annotationsTable;
     private Main annotatorUI;
 
     private DefaultTableModel tableModel;
+    private DefaultTableModel annotationsTableModel;
+
+    private TreeMap<Integer, String> annotatedLines;
 
     public AnnotatedLinesTracker(Main annotatorUI) {
         this.annotatorUI = annotatorUI;
@@ -36,11 +41,27 @@ public class AnnotatedLinesTracker extends JFrame {
     }
 
     private void init() {
-        annotatedLines.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+        annotatedLinesTable.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
             public void valueChanged(ListSelectionEvent event) {
-                if (annotatedLines.getSelectedRow() != -1) {
-                    String text = annotatedLines.getModel().getValueAt(annotatedLines.getSelectedRow(), 1).toString();
+                if (annotatedLinesTable.getSelectedRow() != -1) {
+                    String text = annotatedLinesTable.getModel().getValueAt(annotatedLinesTable.getSelectedRow(), 1).toString();
                     annotatorUI.navigateToLine(text);
+                }
+            }
+        });
+
+        annotationsTable.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+            public void valueChanged(ListSelectionEvent event) {
+                populateAnnotatedLinesTableModel();
+                if (annotationsTable.getSelectedRow() != -1) {
+                    String entity = annotationsTable.getModel().getValueAt(annotationsTable.getSelectedRow(), 0).toString();
+
+                    for (int r = annotatedLinesTable.getModel().getRowCount() - 1; r >= 0; r--) {
+                        String line = annotatedLinesTable.getModel().getValueAt(r, 1).toString();
+                        if (!line.contains(entity)) {
+                            tableModel.removeRow(r);
+                        }
+                    }
                 }
             }
         });
@@ -51,27 +72,75 @@ public class AnnotatedLinesTracker extends JFrame {
                 annotatorUI.updateAnnotatedLinesList();
             }
         });
+
+
     }
 
     public boolean inSelectedAnnotationMode() {
         return onlyShowSelectedAnnotationsCheckBox.isSelected();
     }
 
-    public void update(TreeMap<Integer, String> annotations) {
+    public void update(TreeMap<Integer, String> annotatedLines) {
+        this.annotatedLines = annotatedLines;
+
         tableModel = new DefaultTableModel();
         tableModel.addColumn("Line #");
         tableModel.addColumn("Text");
 
-        for (Map.Entry<Integer, String> entry : annotations.entrySet()) {
+        populateAnnotatedLinesTableModel();
+
+        annotatedLinesTable.setModel(tableModel);
+        annotatedLinesTable.getColumnModel().getColumn(0).setMaxWidth(50);
+        annotatedLinesTable.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
+        annotatedLinesTable.setDefaultEditor(Object.class, null);
+
+        populateAnnotationsList(annotatedLines);
+    }
+
+    private void populateAnnotatedLinesTableModel() {
+        for (int r = tableModel.getRowCount() - 1; r >= 0; r--) {
+            tableModel.removeRow(r);
+        }
+
+        for (Map.Entry<Integer, String> entry : annotatedLines.entrySet()) {
             int line = entry.getKey();
             String annotation = entry.getValue();
             tableModel.addRow(new Object[]{line, annotation});
         }
+    }
 
-        annotatedLines.setModel(tableModel);
-        annotatedLines.getColumnModel().getColumn(0).setMaxWidth(50);
-        annotatedLines.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
-        annotatedLines.setDefaultEditor(Object.class, null);
+    private void populateAnnotationsList(TreeMap<Integer, String> annotatedLines) {
+        annotationsTableModel = new DefaultTableModel();
+        annotationsTableModel.addColumn("Annotation");
+        annotationsTableModel.addColumn("Type");
+
+        Pattern annotationExtractor = Pattern.compile("(?<=<START:).+?(?= <END>)");
+        Pattern entityExtractor = Pattern.compile("(?<=> ).+");
+        Pattern typeExtractor = Pattern.compile(".+(?=>)");
+
+        Set<String> annotations = new TreeSet<>();
+        for (Map.Entry<Integer, String> entry : annotatedLines.entrySet()) {
+            String annotation = entry.getValue();
+            Matcher matcher = annotationExtractor.matcher(annotation);
+
+            while (matcher.find()) {
+                String annotatedText = annotation.substring(matcher.start(), matcher.end());
+                Matcher entityMatcher = entityExtractor.matcher(annotatedText);
+                Matcher typeMatcher = typeExtractor.matcher(annotatedText);
+                if (entityMatcher.find() && typeMatcher.find()) {
+                    String entity = annotatedText.substring(entityMatcher.start(), entityMatcher.end());
+                    String type = annotatedText.substring(typeMatcher.start(), typeMatcher.end());
+                    String element = entity + "\t [" + type + "]";
+                    if (!annotations.contains(element)) {
+                        annotations.add(element);
+                        annotationsTableModel.addRow(new Object[]{entity, type});
+                    }
+                }
+            }
+        }
+
+        annotationsTable.setModel(annotationsTableModel);
+        annotationsTable.setDefaultEditor(Object.class, null);
     }
 
     {
@@ -90,17 +159,24 @@ public class AnnotatedLinesTracker extends JFrame {
      */
     private void $$$setupUI$$$() {
         panel1 = new JPanel();
-        panel1.setLayout(new GridLayoutManager(2, 2, new Insets(0, 0, 0, 0), -1, -1));
+        panel1.setLayout(new GridLayoutManager(2, 3, new Insets(0, 0, 0, 0), -1, -1));
         final JScrollPane scrollPane1 = new JScrollPane();
-        panel1.add(scrollPane1, new GridConstraints(1, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(1500, 400), null, 0, false));
-        annotatedLines = new JTable();
-        scrollPane1.setViewportView(annotatedLines);
+        panel1.add(scrollPane1, new GridConstraints(1, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(1500, -1), null, 0, false));
+        annotatedLinesTable = new JTable();
+        scrollPane1.setViewportView(annotatedLinesTable);
         final JLabel label1 = new JLabel();
         label1.setText("All Annotated Lines:");
         panel1.add(label1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         onlyShowSelectedAnnotationsCheckBox = new JCheckBox();
         onlyShowSelectedAnnotationsCheckBox.setText("Only Show Selected Annotations");
         panel1.add(onlyShowSelectedAnnotationsCheckBox, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label2 = new JLabel();
+        label2.setText("Annotations:");
+        panel1.add(label2, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JScrollPane scrollPane2 = new JScrollPane();
+        panel1.add(scrollPane2, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_VERTICAL, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(600, -1), new Dimension(600, -1), new Dimension(600, -1), 0, false));
+        annotationsTable = new JTable();
+        scrollPane2.setViewportView(annotationsTable);
     }
 
     /**
