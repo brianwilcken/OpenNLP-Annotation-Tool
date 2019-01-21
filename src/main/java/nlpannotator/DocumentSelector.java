@@ -68,7 +68,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
                     new ParameterizedTypeReference<HashMap<String, Object>>() {
                     };
 
-            RequestEntity<Void> request = RequestEntity.get(new URI(annotatorUI.getHostURL() + "/documents?docText=*&fields=id&fields=filename&fields=category&fields=created&fields=lastUpdated&fields=annotatedBy"))
+            RequestEntity<Void> request = RequestEntity.get(new URI(annotatorUI.getHostURL() + "/documents?docText=*&fields=id&fields=filename&fields=category&fields=created&fields=lastUpdated&fields=annotatedBy&fields=percentAnnotated&fields=totalLines"))
                     .accept(MediaType.APPLICATION_JSON).build();
 
             ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
@@ -85,6 +85,8 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
             tableModel.addColumn("Category");
             tableModel.addColumn("Last Updated");
             tableModel.addColumn("Updated By");
+            tableModel.addColumn("% Annotated");
+            tableModel.addColumn("Size (lines)");
 
             for (Map doc : documents) {
                 String id = doc.get("id").toString();
@@ -100,8 +102,16 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
                 if (doc.containsKey("annotatedBy")) {
                     annotatedBy = ((List) doc.get("annotatedBy")).get(0).toString();
                 }
+                String percentAnnotated = "0%";
+                if (doc.containsKey("percentAnnotated")) {
+                    percentAnnotated = Long.parseLong(doc.get("percentAnnotated").toString()) + "%";
+                }
+                String totalLines = "";
+                if (doc.containsKey("totalLines")) {
+                    totalLines = doc.get("totalLines").toString();
+                }
 
-                tableModel.addRow(new Object[]{id, filename, category, lastUpdatedStr, annotatedBy});
+                tableModel.addRow(new Object[]{id, filename, category, lastUpdatedStr, annotatedBy, percentAnnotated, totalLines});
             }
 
             table1.setModel(tableModel);
@@ -109,6 +119,12 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
             table1.getColumn("ID").setMaxWidth(0);
             table1.getColumn("ID").setMinWidth(0);
             table1.getColumn("ID").setResizable(false);
+            table1.getColumn("% Annotated").setMaxWidth(100);
+            table1.getColumn("% Annotated").setMinWidth(100);
+            table1.getColumn("% Annotated").setResizable(false);
+            table1.getColumn("Size (lines)").setMaxWidth(100);
+            table1.getColumn("Size (lines)").setMinWidth(100);
+            table1.getColumn("Size (lines)").setResizable(false);
             table1.setDefaultEditor(Object.class, null);
             table1.setAutoCreateRowSorter(true);
             table1.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
@@ -258,7 +274,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
         panel1.setLayout(new GridLayoutManager(3, 5, new Insets(0, 0, 0, 0), -1, -1));
         scrollPane1 = new JScrollPane();
         scrollPane1.setHorizontalScrollBarPolicy(30);
-        panel1.add(scrollPane1, new GridConstraints(2, 0, 1, 5, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(800, 600), new Dimension(800, 600), null, 0, false));
+        panel1.add(scrollPane1, new GridConstraints(2, 0, 1, 5, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(1200, 600), new Dimension(1200, 600), null, 0, false));
         table1 = new JTable();
         scrollPane1.setViewportView(table1);
         final JLabel label1 = new JLabel();
