@@ -395,10 +395,7 @@ public class Main extends javax.swing.JFrame {
             String text = doc.getText(0, doc.getLength());
             int index = text.indexOf(line);
             playground.setCaretPosition(index);
-            removeHighlights();
-            highlightAnnotations();
-            highlightFound();
-            highlightText(line, false, Color.WHITE, Color.GRAY);
+            playground.select(index, index + line.length());
         } catch (BadLocationException e) {
             e.printStackTrace();
         }
