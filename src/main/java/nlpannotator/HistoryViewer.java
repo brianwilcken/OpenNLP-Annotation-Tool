@@ -48,7 +48,7 @@ public class HistoryViewer extends JFrame {
         table1.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
             public void valueChanged(ListSelectionEvent event) {
                 if (table1.getSelectedRow() != -1) {
-                    String historyId = table1.getModel().getValueAt(table1.getSelectedRow(), 0).toString();
+                    String historyId = table1.getValueAt(table1.getSelectedRow(), 0).toString();
                     loadDocumentHistory(historyId);
                 }
             }
@@ -86,7 +86,9 @@ public class HistoryViewer extends JFrame {
 
             table1.setModel(tableModel);
 
-            table1.getColumnModel().removeColumn(table1.getColumn("ID"));
+            table1.getColumn("ID").setMaxWidth(0);
+            table1.getColumn("ID").setMinWidth(0);
+            table1.getColumn("ID").setResizable(false);
             table1.setDefaultEditor(Object.class, null);
         } catch (URISyntaxException e) {
             JOptionPane.showMessageDialog(annotatorUI, e.getMessage());

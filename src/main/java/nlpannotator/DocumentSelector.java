@@ -106,7 +106,9 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
 
             table1.setModel(tableModel);
 
-            table1.getColumnModel().removeColumn(table1.getColumn("ID"));
+            table1.getColumn("ID").setMaxWidth(0);
+            table1.getColumn("ID").setMinWidth(0);
+            table1.getColumn("ID").setResizable(false);
             table1.setDefaultEditor(Object.class, null);
             table1.setAutoCreateRowSorter(true);
             table1.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
@@ -321,7 +323,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
     public void valueChanged(ListSelectionEvent listSelectionEvent) {
         try {
             if (table1.getSelectedRow() != -1) {
-                String id = table1.getModel().getValueAt(table1.getSelectedRow(), 0).toString();
+                String id = table1.getValueAt(table1.getSelectedRow(), 0).toString();
 
                 ParameterizedTypeReference<HashMap<String, Object>> responseType =
                         new ParameterizedTypeReference<HashMap<String, Object>>() {

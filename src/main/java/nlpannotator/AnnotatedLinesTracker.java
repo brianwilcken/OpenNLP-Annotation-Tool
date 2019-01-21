@@ -44,7 +44,7 @@ public class AnnotatedLinesTracker extends JFrame {
         annotatedLinesTable.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
             public void valueChanged(ListSelectionEvent event) {
                 if (annotatedLinesTable.getSelectedRow() != -1) {
-                    String text = annotatedLinesTable.getModel().getValueAt(annotatedLinesTable.getSelectedRow(), 1).toString();
+                    String text = annotatedLinesTable.getValueAt(annotatedLinesTable.getSelectedRow(), 1).toString();
                     annotatorUI.navigateToLine(text);
                 }
             }
@@ -54,10 +54,10 @@ public class AnnotatedLinesTracker extends JFrame {
             public void valueChanged(ListSelectionEvent event) {
                 populateAnnotatedLinesTableModel();
                 if (annotationsTable.getSelectedRow() != -1) {
-                    String entity = annotationsTable.getModel().getValueAt(annotationsTable.getSelectedRow(), 0).toString();
+                    String entity = annotationsTable.getValueAt(annotationsTable.getSelectedRow(), 0).toString();
 
-                    for (int r = annotatedLinesTable.getModel().getRowCount() - 1; r >= 0; r--) {
-                        String line = annotatedLinesTable.getModel().getValueAt(r, 1).toString();
+                    for (int r = annotatedLinesTable.getRowCount() - 1; r >= 0; r--) {
+                        String line = annotatedLinesTable.getValueAt(r, 1).toString();
                         if (!line.contains(entity)) {
                             tableModel.removeRow(r);
                         }
@@ -140,7 +140,15 @@ public class AnnotatedLinesTracker extends JFrame {
         }
 
         annotationsTable.setModel(annotationsTableModel);
+        annotationsTable.setAutoCreateRowSorter(true);
         annotationsTable.setDefaultEditor(Object.class, null);
+
+        //sort by the Annotation column
+        DefaultRowSorter sorter = ((DefaultRowSorter) annotationsTable.getRowSorter());
+        ArrayList list = new ArrayList();
+        list.add(new RowSorter.SortKey(0, SortOrder.ASCENDING));
+        sorter.setSortKeys(list);
+        sorter.sort();
     }
 
     {
