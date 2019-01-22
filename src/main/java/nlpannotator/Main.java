@@ -864,8 +864,10 @@ public class Main extends javax.swing.JFrame {
         }
         if (document.containsKey("annotated")) {
             playground.setText(document.get("annotated").toString());
-        } else {
+        } else if (document.containsKey("parsed")) {
             playground.setText(document.get("parsed").toString());
+        } else {
+            playground.setText(document.get("docText").toString());
         }
 
         playground.setCaretPosition(0);

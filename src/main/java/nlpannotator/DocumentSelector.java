@@ -2,6 +2,7 @@ package nlpannotator;
 
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
+import com.sun.net.httpserver.HttpServer;
 import common.Tools;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.FileSystemResource;
@@ -10,6 +11,7 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
@@ -185,12 +187,12 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
                     ResponseEntity<HashMap<String, Object>> response = null;
                     try {
                         response = restTemplate.exchange(annotatorUI.getHostURL() + "/documents", HttpMethod.POST, request, responseType);
-                    } catch (HttpClientErrorException e) {
-                        JOptionPane.showMessageDialog(annotatorUI, "Failed to upload file: (" + files[i].getName() + ") Reason: " + e.getMessage());
+                    } catch (HttpClientErrorException | HttpServerErrorException e) {
+                        JOptionPane.showMessageDialog(annotatorUI, "Failed to upload file: (" + files[i].getName() + ") Reason: " + e.getResponseBodyAsString());
                     }
 
                     if (response.getStatusCode() != HttpStatus.OK) {
-                        JOptionPane.showMessageDialog(annotatorUI, "Failed to upload file: (" + files[i].getName() + ") Reason: " + response.getStatusCode());
+                        JOptionPane.showMessageDialog(annotatorUI, "Failed to upload file: (" + files[i].getName() + ") Reason: " + response.getBody().get("data").toString());
                     }
                 }
             } catch (ResourceAccessException e) {
