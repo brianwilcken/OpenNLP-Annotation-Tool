@@ -333,6 +333,18 @@ public class Main extends javax.swing.JFrame {
         }
     }
 
+    public void deleteAnnotation(String annotation, String type) {
+        int caretPos = playground.getCaretPosition();
+        String docText = playground.getText();
+        String annotationText = " <START:" + type + "> " + annotation + " <END> ";
+        docText = docText.replace(annotationText, annotation);
+        playground.setText(docText);
+        playground.setCaretPosition(caretPos);
+        removeHighlights();
+        highlightAnnotations();
+        highlightFound();
+    }
+
     private String getAnnotation() {
         String annotationType = getAnnotationType();
         String annotation = " <START:" + annotationType + "> ";
@@ -394,6 +406,7 @@ public class Main extends javax.swing.JFrame {
         try {
             String text = doc.getText(0, doc.getLength());
             int index = text.indexOf(line);
+            playground.grabFocus();
             playground.setCaretPosition(index);
             playground.select(index, index + line.length());
         } catch (BadLocationException e) {

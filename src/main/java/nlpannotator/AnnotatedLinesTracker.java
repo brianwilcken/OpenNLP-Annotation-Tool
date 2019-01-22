@@ -19,6 +19,7 @@ public class AnnotatedLinesTracker extends JFrame {
     private JPanel panel1;
     private JCheckBox onlyShowSelectedAnnotationsCheckBox;
     private JTable annotationsTable;
+    private JButton deleteSelectedAnnotationButton;
     private Main annotatorUI;
 
     private DefaultTableModel tableModel;
@@ -73,7 +74,23 @@ public class AnnotatedLinesTracker extends JFrame {
             }
         });
 
+        deleteSelectedAnnotationButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                deleteSelectedAnnotation();
+            }
+        });
+    }
 
+    private void deleteSelectedAnnotation() {
+        if (annotationsTable.getSelectedRow() != -1 && JOptionPane.showConfirmDialog(this, "Really delete annotation?") == 0) {
+            int row = annotationsTable.getSelectedRow();
+            String annotation = annotationsTable.getValueAt(row, 0).toString();
+            String type = annotationsTable.getValueAt(row, 1).toString();
+            annotatorUI.deleteAnnotation(annotation, type);
+        } else {
+            JOptionPane.showMessageDialog(this, "Select an annotation...");
+        }
     }
 
     public boolean inSelectedAnnotationMode() {
@@ -167,7 +184,7 @@ public class AnnotatedLinesTracker extends JFrame {
      */
     private void $$$setupUI$$$() {
         panel1 = new JPanel();
-        panel1.setLayout(new GridLayoutManager(2, 3, new Insets(0, 0, 0, 0), -1, -1));
+        panel1.setLayout(new GridLayoutManager(2, 4, new Insets(0, 0, 0, 0), -1, -1));
         final JScrollPane scrollPane1 = new JScrollPane();
         panel1.add(scrollPane1, new GridConstraints(1, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(1500, -1), null, 0, false));
         annotatedLinesTable = new JTable();
@@ -182,9 +199,12 @@ public class AnnotatedLinesTracker extends JFrame {
         label2.setText("Annotations:");
         panel1.add(label2, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JScrollPane scrollPane2 = new JScrollPane();
-        panel1.add(scrollPane2, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_VERTICAL, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(600, -1), new Dimension(600, -1), new Dimension(600, -1), 0, false));
+        panel1.add(scrollPane2, new GridConstraints(1, 2, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_VERTICAL, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(600, -1), new Dimension(600, -1), new Dimension(600, -1), 0, false));
         annotationsTable = new JTable();
         scrollPane2.setViewportView(annotationsTable);
+        deleteSelectedAnnotationButton = new JButton();
+        deleteSelectedAnnotationButton.setText("Delete Selected Annotation");
+        panel1.add(deleteSelectedAnnotationButton, new GridConstraints(0, 3, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, new Dimension(200, -1), 0, false));
     }
 
     /**
