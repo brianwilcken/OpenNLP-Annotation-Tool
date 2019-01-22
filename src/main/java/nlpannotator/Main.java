@@ -46,6 +46,7 @@ public class Main extends javax.swing.JFrame {
     private HistoryViewer historyViewer;
     private AutoDetectionThreshold autoDetectionThreshold;
     private AnnotatedLinesTracker annotatedLinesTracker;
+    private FindAndReplace findAndReplace;
 
     private SizedStack<String> undoStates;
     private SizedStack<String> redoStates;
@@ -655,15 +656,25 @@ public class Main extends javax.swing.JFrame {
         pack();
     }
 
-    private FindAndReplace findAndReplace;
+    public void findMoreLikeThisAnnotation(String annotation) {
+        FindAndReplace findAndReplace = getFindAndReplace();
+        findAndReplace.setVisible(true);
+        List<String> wordsList = Arrays.asList(annotation.toLowerCase().split(" "));
+        findAndReplace.loadSearchTerms(wordsList);
+    }
+
+    private FindAndReplace getFindAndReplace() {
+        if (findAndReplace == null) {
+            findAndReplace = new FindAndReplace("FindAndReplace", this);
+            findAndReplace.init();
+        }
+        return findAndReplace;
+    }
+
     private void findActionPerformed(ActionEvent evt) {
         if (document != null) {
-            if (findAndReplace == null) {
-                findAndReplace = new FindAndReplace("FindAndReplace", this);
-                findAndReplace.init();
-            } else {
-                findAndReplace.setVisible(true);
-            }
+            FindAndReplace findAndReplace = getFindAndReplace();
+            findAndReplace.setVisible(true);
             Highlight[] highlights = playground.getHighlighter().getHighlights();
             for (Highlight highlight : highlights) {
                 Document doc = playground.getDocument();

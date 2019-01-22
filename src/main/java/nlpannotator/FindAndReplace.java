@@ -55,7 +55,6 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
         setLocation(annotator.getLocationOnScreen());
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
         pack();
-        setVisible(true);
     }
 
     private void populate() {
@@ -176,16 +175,20 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
         for (Object category : categories) {
             String wordsText = Tools.getResource("dictionary/" + category + ".txt");
             List<String> wordsList = Arrays.asList(wordsText.split("\\r\\n"));
-            int[] selections = lsFound.getSelectedIndices();
-            for (String entry : wordsList) {
-                String titleCaps = WordUtils.capitalizeFully(entry);
-                String allCaps = entry.toUpperCase();
-                selections = updateFoundSelections(entry, selections);
-                selections = updateFoundSelections(titleCaps, selections);
-                selections = updateFoundSelections(allCaps, selections);
-            }
-            lsFound.setSelectedIndices(selections);
+            loadSearchTerms(wordsList);
         }
+    }
+
+    public void loadSearchTerms(List<String> wordsList) {
+        int[] selections = lsFound.getSelectedIndices();
+        for (String entry : wordsList) {
+            String titleCaps = WordUtils.capitalizeFully(entry);
+            String allCaps = entry.toUpperCase();
+            selections = updateFoundSelections(entry, selections);
+            selections = updateFoundSelections(titleCaps, selections);
+            selections = updateFoundSelections(allCaps, selections);
+        }
+        lsFound.setSelectedIndices(selections);
     }
 
     private int[] updateFoundSelections(String entry, int[] selections) {

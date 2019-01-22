@@ -2,6 +2,7 @@ package nlpannotator;
 
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
+import com.intellij.uiDesigner.core.Spacer;
 
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
@@ -20,6 +21,7 @@ public class AnnotatedLinesTracker extends JFrame {
     private JCheckBox onlyShowSelectedAnnotationsCheckBox;
     private JTable annotationsTable;
     private JButton deleteSelectedAnnotationButton;
+    private JButton findMoreLikeThisButton;
     private Main annotatorUI;
 
     private DefaultTableModel tableModel;
@@ -80,6 +82,13 @@ public class AnnotatedLinesTracker extends JFrame {
                 deleteSelectedAnnotation();
             }
         });
+
+        findMoreLikeThisButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                findMoreLikeThisAnnotation();
+            }
+        });
     }
 
     private void deleteSelectedAnnotation() {
@@ -88,6 +97,16 @@ public class AnnotatedLinesTracker extends JFrame {
             String annotation = annotationsTable.getValueAt(row, 0).toString();
             String type = annotationsTable.getValueAt(row, 1).toString();
             annotatorUI.deleteAnnotation(annotation, type);
+        } else {
+            JOptionPane.showMessageDialog(this, "Select an annotation...");
+        }
+    }
+
+    private void findMoreLikeThisAnnotation() {
+        if (annotationsTable.getSelectedRow() != -1) {
+            int row = annotationsTable.getSelectedRow();
+            String annotation = annotationsTable.getValueAt(row, 0).toString();
+            annotatorUI.findMoreLikeThisAnnotation(annotation);
         } else {
             JOptionPane.showMessageDialog(this, "Select an annotation...");
         }
@@ -184,9 +203,9 @@ public class AnnotatedLinesTracker extends JFrame {
      */
     private void $$$setupUI$$$() {
         panel1 = new JPanel();
-        panel1.setLayout(new GridLayoutManager(2, 4, new Insets(0, 0, 0, 0), -1, -1));
+        panel1.setLayout(new GridLayoutManager(2, 10, new Insets(0, 0, 0, 0), -1, -1));
         final JScrollPane scrollPane1 = new JScrollPane();
-        panel1.add(scrollPane1, new GridConstraints(1, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(1500, -1), null, 0, false));
+        panel1.add(scrollPane1, new GridConstraints(1, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(1600, -1), new Dimension(2400, -1), 0, false));
         annotatedLinesTable = new JTable();
         scrollPane1.setViewportView(annotatedLinesTable);
         final JLabel label1 = new JLabel();
@@ -195,16 +214,21 @@ public class AnnotatedLinesTracker extends JFrame {
         onlyShowSelectedAnnotationsCheckBox = new JCheckBox();
         onlyShowSelectedAnnotationsCheckBox.setText("Only Show Selected Annotations");
         panel1.add(onlyShowSelectedAnnotationsCheckBox, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label2 = new JLabel();
-        label2.setText("Annotations:");
-        panel1.add(label2, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JScrollPane scrollPane2 = new JScrollPane();
-        panel1.add(scrollPane2, new GridConstraints(1, 2, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_VERTICAL, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(600, -1), new Dimension(600, -1), new Dimension(600, -1), 0, false));
+        panel1.add(scrollPane2, new GridConstraints(1, 2, 1, 8, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_VERTICAL, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(600, -1), null, 0, false));
         annotationsTable = new JTable();
         scrollPane2.setViewportView(annotationsTable);
+        findMoreLikeThisButton = new JButton();
+        findMoreLikeThisButton.setText("Find More Like This");
+        panel1.add(findMoreLikeThisButton, new GridConstraints(0, 7, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label2 = new JLabel();
+        label2.setText("Annotations:");
+        panel1.add(label2, new GridConstraints(0, 2, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         deleteSelectedAnnotationButton = new JButton();
         deleteSelectedAnnotationButton.setText("Delete Selected Annotation");
-        panel1.add(deleteSelectedAnnotationButton, new GridConstraints(0, 3, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, new Dimension(200, -1), 0, false));
+        panel1.add(deleteSelectedAnnotationButton, new GridConstraints(0, 8, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final Spacer spacer1 = new Spacer();
+        panel1.add(spacer1, new GridConstraints(0, 9, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
     }
 
     /**
