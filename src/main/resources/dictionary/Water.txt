@@ -5,10 +5,12 @@ booster
 bypass
 canal
 center
+clearwell
 collection
 combined
 control
 conveyance
+creek
 dam
 distribution
 diversion
@@ -19,6 +21,7 @@ ground
 groundwater
 intake
 interconnect
+lake
 main
 municipal
 outfall
@@ -32,6 +35,7 @@ raw
 recovery
 reservior
 reservoir
+river
 sewer
 station
 storage
@@ -41,3 +45,4 @@ tower
 treatment
 water
 well
+wtp

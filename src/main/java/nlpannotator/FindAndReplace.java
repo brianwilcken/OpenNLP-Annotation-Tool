@@ -6,6 +6,12 @@ import com.intellij.uiDesigner.core.GridLayoutManager;
 import common.Tools;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.WordUtils;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.MediaType;
+import org.springframework.http.RequestEntity;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.web.client.RestTemplate;
 
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
@@ -13,8 +19,11 @@ import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.*;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class FindAndReplace extends JFrame implements ListSelectionListener {
     public static void main(String[] args) {
@@ -36,6 +45,8 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
     private JButton previousButton;
     private Main annotator;
 
+    private RestTemplate restTemplate;
+
     private TreeMap<Integer, String> locMap;
 
     private DefaultListModel<String> found;
@@ -44,6 +55,9 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
         super(frame);
         this.annotator = annotator;
         found = new DefaultListModel<>();
+
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        restTemplate = new RestTemplate(requestFactory);
     }
 
     public void init() {
@@ -171,11 +185,59 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
     }
 
     private void loadDictionaryActionPerformed(ActionEvent evt) {
-        List categories = annotator.getDocumentCategories();
-        for (Object category : categories) {
-            String wordsText = Tools.getResource("dictionary/" + category + ".txt");
-            List<String> wordsList = Arrays.asList(wordsText.split("\\r\\n"));
-            loadSearchTerms(wordsList);
+        try {
+            String id = annotator.document.get("id").toString();
+
+            ParameterizedTypeReference<HashMap<String, Object>> responseType =
+                    new ParameterizedTypeReference<HashMap<String, Object>>() {
+                    };
+
+            RequestEntity<Void> request = RequestEntity.get(new URI(annotator.getHostURL() + "/documents/entities/dictionary/" + id))
+                    .accept(MediaType.APPLICATION_JSON).build();
+
+            ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
+
+            Map<String, Object> jsonDict = response.getBody();
+
+            List<String> entities = new ArrayList<>();
+            List<Map<String, Object>> entityMaps = (List<Map<String, Object>>) jsonDict.get("data");
+            for (Map<String, Object> entityMap : entityMaps) {
+                String entity = entityMap.get("entity").toString();
+                if (!entities.contains(entity)) {
+                    entities.add(entity);
+                }
+            }
+
+            List categories = annotator.getDocumentCategories();
+            for (Object category : categories) {
+                List<String> categoryEntities = new ArrayList<>();
+                String wordsText = Tools.getResource("dictionary/" + category + ".txt");
+                List<String> wordsList = Arrays.asList(wordsText.split("\\r\\n")).stream().collect(Collectors.toList());
+
+                for (String entity : entities) {
+                    List<String> words = Arrays.asList(entity.toLowerCase().split(" ")).stream().collect(Collectors.toList());
+                    for (String word : words) {
+                        boolean found = false;
+                        for (String dictWord : wordsList) {
+                            if (word.contains(dictWord) || dictWord.contains(word)) {
+                                categoryEntities.add(entity);
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (found) {
+                            break;
+                        }
+                    }
+//                    if (words.retainAll(wordsList) && words.size() > 0) {
+//                        categoryEntities.add(entity);
+//                    }
+                }
+
+                loadSearchTerms(categoryEntities);
+            }
+        } catch (URISyntaxException e) {
+            JOptionPane.showMessageDialog(annotator, e.getMessage());
         }
     }
 
