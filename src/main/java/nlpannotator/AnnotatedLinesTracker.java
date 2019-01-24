@@ -58,10 +58,11 @@ public class AnnotatedLinesTracker extends JFrame {
                 populateAnnotatedLinesTableModel();
                 if (annotationsTable.getSelectedRow() != -1) {
                     String entity = annotationsTable.getValueAt(annotationsTable.getSelectedRow(), 0).toString();
-
+                    String type = annotationsTable.getValueAt(annotationsTable.getSelectedRow(), 1).toString();
+                    String fullAnnotation = "<START:" + type + "> " + entity + " <END>";
                     for (int r = annotatedLinesTable.getRowCount() - 1; r >= 0; r--) {
                         String line = annotatedLinesTable.getValueAt(r, 1).toString();
-                        if (!line.contains(entity)) {
+                        if (!line.contains(fullAnnotation)) {
                             tableModel.removeRow(r);
                         }
                     }

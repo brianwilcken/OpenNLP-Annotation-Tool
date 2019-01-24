@@ -40,6 +40,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
     private JButton loadURLButton;
     private JButton crawlURLButton;
     private JTable table1;
+    private JButton deleteButton;
     private List<Map<String, Object>> documents;
     private Main annotatorUI;
     private FileDrop fileDrop;
@@ -70,7 +71,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
                     new ParameterizedTypeReference<HashMap<String, Object>>() {
                     };
 
-            RequestEntity<Void> request = RequestEntity.get(new URI(annotatorUI.getHostURL() + "/documents?docText=*&fields=id&fields=filename&fields=category&fields=created&fields=lastUpdated&fields=annotatedBy&fields=percentAnnotated&fields=totalLines"))
+            RequestEntity<Void> request = RequestEntity.get(new URI(annotatorUI.getHostURL() + "/documents?docText=*&fields=id&fields=filename&fields=category&fields=created&fields=lastUpdated&fields=annotatedBy&fields=percentAnnotated&fields=totalLines&fields=url"))
                     .accept(MediaType.APPLICATION_JSON).build();
 
             ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
@@ -84,6 +85,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
             DefaultTableModel tableModel = new DefaultTableModel();
             tableModel.addColumn("ID");
             tableModel.addColumn("Filename");
+            tableModel.addColumn("URL");
             tableModel.addColumn("Category");
             tableModel.addColumn("Last Updated");
             tableModel.addColumn("Updated By");
@@ -94,6 +96,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
                 String id = doc.get("id").toString();
                 String filename = doc.get("filename").toString();
                 String category = doc.containsKey("category") ? doc.get("category").toString() : "";
+                String url = doc.containsKey("url") ? doc.get("url").toString() : "";
                 long created = Long.parseLong(doc.get("created").toString());
                 long lastUpdated = Long.parseLong(doc.get("lastUpdated").toString());
                 String lastUpdatedStr = Tools.getFormattedDateTimeString(Instant.ofEpochMilli((long) doc.get("lastUpdated")));
@@ -113,7 +116,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
                     totalLines = doc.get("totalLines").toString();
                 }
 
-                tableModel.addRow(new Object[]{id, filename, category, lastUpdatedStr, annotatedBy, percentAnnotated, totalLines});
+                tableModel.addRow(new Object[]{id, filename, url, category, lastUpdatedStr, annotatedBy, percentAnnotated, totalLines});
             }
 
             table1.setModel(tableModel);
@@ -160,6 +163,13 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
                 crawlURLActionListener(actionEvent);
+            }
+        });
+
+        deleteButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                deleteActionListener(actionEvent);
             }
         });
     }
@@ -230,6 +240,8 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
                 annotatorUI.loadActionPerformed(null);
             } catch (MalformedURLException e) {
                 textField1.setBackground(new Color(Color.RED.getRGB()));
+            } catch (HttpClientErrorException | HttpServerErrorException e) {
+                JOptionPane.showMessageDialog(annotatorUI, e.getResponseBodyAsString());
             } catch (Exception e) {
                 JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
             } finally {
@@ -253,6 +265,38 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
         } catch (MalformedURLException e) {
             textField1.setBackground(new Color(Color.RED.getRGB()));
         } catch (Exception e) {
+            JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
+        }
+    }
+
+    public void deleteActionListener(ActionEvent evt) {
+        try {
+            if (table1.getSelectedRow() != -1 && JOptionPane.showConfirmDialog(this, "Are you sure (this action cannot be undone)?") == 0) {
+                int[] rows = table1.getSelectedRows();
+                for (int r = 0; r < rows.length; r++) {
+                    String id = table1.getValueAt(rows[r], 0).toString();
+                    ParameterizedTypeReference<HashMap<String, Object>> responseType =
+                            new ParameterizedTypeReference<HashMap<String, Object>>() {
+                            };
+
+                    RequestEntity<Void> request = RequestEntity.delete(new URI(annotatorUI.getHostURL() + "/documents/" + id))
+                            .accept(MediaType.APPLICATION_JSON).build();
+
+                    ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
+
+                    if (response.getStatusCode() == HttpStatus.NO_CONTENT) {
+                        annotatorUI.clearIfDeleted(id);
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Failed to delete document! Reason: " + response.getStatusCode());
+                    }
+                }
+                populate();
+            } else {
+                JOptionPane.showMessageDialog(this, "Select a document...");
+            }
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            JOptionPane.showMessageDialog(annotatorUI, e.getResponseBodyAsString());
+        } catch (URISyntaxException e) {
             JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
         }
     }
@@ -293,6 +337,9 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
         crawlURLButton = new JButton();
         crawlURLButton.setText("Crawl URL");
         panel1.add(crawlURLButton, new GridConstraints(0, 4, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        deleteButton = new JButton();
+        deleteButton.setText("Delete");
+        panel1.add(deleteButton, new GridConstraints(1, 4, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     }
 
     /**

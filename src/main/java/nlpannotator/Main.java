@@ -781,6 +781,17 @@ public class Main extends javax.swing.JFrame {
         }
     }
 
+    public void clearIfDeleted(String id) {
+        if (document != null &&
+                document.containsKey("id") &&
+                document.get("id").toString().equals(id)) {
+            undoStates.empty();
+            redoStates.empty();
+            document = null;
+            playground.setText("");
+        }
+    }
+
     public void autoAnnotateDocument(int threshold) {
         if (document != null) {
             undoStates.empty();
