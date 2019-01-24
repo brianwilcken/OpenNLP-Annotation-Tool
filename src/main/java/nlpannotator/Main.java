@@ -507,6 +507,7 @@ public class Main extends javax.swing.JFrame {
     public void populateDocumentCategories() {
         doccatModel = new DefaultComboBoxModel();
 
+        doccatModel.addElement("Not_Applicable");
         for (String key : FacilityTypes.dictionary.keySet()) {
             doccatModel.addElement(key);
         }
@@ -751,8 +752,8 @@ public class Main extends javax.swing.JFrame {
                 ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
 
                 if (response.getStatusCode() == HttpStatus.OK) {
-                    double accuracy = (double)response.getBody().get("data");
-                    JOptionPane.showMessageDialog(this, "Model accuracy: " + accuracy);
+                    double accuracy = (double)response.getBody().get("data") * 100;
+                    JOptionPane.showMessageDialog(this, "Model accuracy: " + accuracy + "%");
                 } else {
                     JOptionPane.showMessageDialog(this, "Server error has occurred!!");
                 }
@@ -966,8 +967,6 @@ public class Main extends javax.swing.JFrame {
                     if (response.getStatusCode() == HttpStatus.OK) {
                         if (doNLP) {
                             JOptionPane.showMessageDialog(this, "Document Processing Complete");
-                        } else {
-                            JOptionPane.showMessageDialog(this, "Save Successful");
                         }
                         reloadHistory();
                         documentSelector.populate();

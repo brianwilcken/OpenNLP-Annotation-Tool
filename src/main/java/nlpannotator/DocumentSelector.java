@@ -41,15 +41,18 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
     private JButton crawlURLButton;
     private JTable table1;
     private JButton deleteButton;
+    private JCheckBox showNotApplicableDocumentsCheckBox;
     private List<Map<String, Object>> documents;
     private Main annotatorUI;
     private FileDrop fileDrop;
+    private DefaultTableModel tableModel;
 
     public DocumentSelector(Main annotatorUI) {
         this.annotatorUI = annotatorUI;
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         restTemplate = new RestTemplate(requestFactory);
 
+        initTableModel();
         populate();
 
         addEventListeners();
@@ -58,11 +61,39 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
         setContentPane(panel1);
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
         pack();
+
         setVisible(true);
     }
 
     public static void main(String[] args) {
         DocumentSelector selector = new DocumentSelector(null);
+    }
+
+    private void initTableModel() {
+        tableModel = new DefaultTableModel();
+        tableModel.addColumn("ID");
+        tableModel.addColumn("Filename");
+        tableModel.addColumn("URL");
+        tableModel.addColumn("Category");
+        tableModel.addColumn("Last Updated");
+        tableModel.addColumn("Updated By");
+        tableModel.addColumn("% Annotated");
+        tableModel.addColumn("Size (lines)");
+
+        table1.setModel(tableModel);
+
+        table1.getColumn("ID").setMaxWidth(0);
+        table1.getColumn("ID").setMinWidth(0);
+        table1.getColumn("ID").setResizable(false);
+        table1.getColumn("% Annotated").setMaxWidth(100);
+        table1.getColumn("% Annotated").setMinWidth(100);
+        table1.getColumn("% Annotated").setResizable(false);
+        table1.getColumn("Size (lines)").setMaxWidth(100);
+        table1.getColumn("Size (lines)").setMinWidth(100);
+        table1.getColumn("Size (lines)").setResizable(false);
+        table1.setDefaultEditor(Object.class, null);
+        table1.setAutoCreateRowSorter(true);
+        table1.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
     }
 
     public void populate() {
@@ -82,20 +113,18 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
 
             Collections.sort(documents, Tools.documentComparator);
 
-            DefaultTableModel tableModel = new DefaultTableModel();
-            tableModel.addColumn("ID");
-            tableModel.addColumn("Filename");
-            tableModel.addColumn("URL");
-            tableModel.addColumn("Category");
-            tableModel.addColumn("Last Updated");
-            tableModel.addColumn("Updated By");
-            tableModel.addColumn("% Annotated");
-            tableModel.addColumn("Size (lines)");
+            //clear out the table model before re-populating it with data
+            for (int r = tableModel.getRowCount() - 1; r >= 0; r--) {
+                tableModel.removeRow(r);
+            }
 
             for (Map doc : documents) {
+                String category = doc.containsKey("category") ? doc.get("category").toString() : "";
+                if (!showNotApplicableDocumentsCheckBox.isSelected() && category.equals("[Not_Applicable]")) {
+                    continue;
+                }
                 String id = doc.get("id").toString();
                 String filename = doc.get("filename").toString();
-                String category = doc.containsKey("category") ? doc.get("category").toString() : "";
                 String url = doc.containsKey("url") ? doc.get("url").toString() : "";
                 long created = Long.parseLong(doc.get("created").toString());
                 long lastUpdated = Long.parseLong(doc.get("lastUpdated").toString());
@@ -118,21 +147,6 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
 
                 tableModel.addRow(new Object[]{id, filename, url, category, lastUpdatedStr, annotatedBy, percentAnnotated, totalLines});
             }
-
-            table1.setModel(tableModel);
-
-            table1.getColumn("ID").setMaxWidth(0);
-            table1.getColumn("ID").setMinWidth(0);
-            table1.getColumn("ID").setResizable(false);
-            table1.getColumn("% Annotated").setMaxWidth(100);
-            table1.getColumn("% Annotated").setMinWidth(100);
-            table1.getColumn("% Annotated").setResizable(false);
-            table1.getColumn("Size (lines)").setMaxWidth(100);
-            table1.getColumn("Size (lines)").setMinWidth(100);
-            table1.getColumn("Size (lines)").setResizable(false);
-            table1.setDefaultEditor(Object.class, null);
-            table1.setAutoCreateRowSorter(true);
-            table1.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
 
             scrollPane1.setPreferredSize(new Dimension(400, 200));
         } catch (URISyntaxException e) {
@@ -170,6 +184,13 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
                 deleteActionListener(actionEvent);
+            }
+        });
+
+        showNotApplicableDocumentsCheckBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                populate();
             }
         });
     }
@@ -317,7 +338,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
      */
     private void $$$setupUI$$$() {
         panel1 = new JPanel();
-        panel1.setLayout(new GridLayoutManager(3, 5, new Insets(0, 0, 0, 0), -1, -1));
+        panel1.setLayout(new GridLayoutManager(4, 5, new Insets(0, 0, 0, 0), -1, -1));
         scrollPane1 = new JScrollPane();
         scrollPane1.setHorizontalScrollBarPolicy(30);
         panel1.add(scrollPane1, new GridConstraints(2, 0, 1, 5, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(1200, 600), new Dimension(1200, 600), null, 0, false));
@@ -340,6 +361,9 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
         deleteButton = new JButton();
         deleteButton.setText("Delete");
         panel1.add(deleteButton, new GridConstraints(1, 4, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        showNotApplicableDocumentsCheckBox = new JCheckBox();
+        showNotApplicableDocumentsCheckBox.setText("Show Not Applicable Documents");
+        panel1.add(showNotApplicableDocumentsCheckBox, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     }
 
     /**
@@ -403,8 +427,10 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
 
                 List<Map<String, Object>> document = ((List<Map<String, Object>>) jsonDict.get("data"));
 
-                annotatorUI.reloadHistory();
-                annotatorUI.loadDocument(document.get(0));
+                if (document.size() > 0) {
+                    annotatorUI.reloadHistory();
+                    annotatorUI.loadDocument(document.get(0));
+                }
             }
         } catch (URISyntaxException e) {
             JOptionPane.showMessageDialog(annotatorUI, e.getMessage());

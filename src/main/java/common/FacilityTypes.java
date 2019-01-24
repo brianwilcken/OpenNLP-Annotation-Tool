@@ -170,6 +170,7 @@ public class FacilityTypes {
         waterTypes.add("Water_Treatment_Plant");
 
 
+
         dictionary.put("Biofuels", biofuelsTypes);
         dictionary.put("Coal", coalTypes);
         dictionary.put("Communications", communicationsTypes);
