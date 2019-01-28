@@ -1,8 +1,9 @@
 package nlpannotator;
 
+import com.google.common.base.Strings;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
-import com.sun.net.httpserver.HttpServer;
+import com.intellij.uiDesigner.core.Spacer;
 import common.Tools;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.FileSystemResource;
@@ -42,10 +43,14 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
     private JTable table1;
     private JButton deleteButton;
     private JCheckBox showNotApplicableDocumentsCheckBox;
+    private JButton addToProjectButton;
+    private JTextField txtProject;
+    private JButton filterByProjectButton;
     private List<Map<String, Object>> documents;
     private Main annotatorUI;
     private FileDrop fileDrop;
     private DefaultTableModel tableModel;
+    private boolean clearingTableModel;
 
     public DocumentSelector(Main annotatorUI) {
         this.annotatorUI = annotatorUI;
@@ -75,6 +80,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
         tableModel.addColumn("Filename");
         tableModel.addColumn("URL");
         tableModel.addColumn("Category");
+        tableModel.addColumn("Project");
         tableModel.addColumn("Last Updated");
         tableModel.addColumn("Updated By");
         tableModel.addColumn("% Annotated");
@@ -85,6 +91,12 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
         table1.getColumn("ID").setMaxWidth(0);
         table1.getColumn("ID").setMinWidth(0);
         table1.getColumn("ID").setResizable(false);
+        table1.getColumn("Last Updated").setMaxWidth(200);
+        table1.getColumn("Last Updated").setMinWidth(200);
+        table1.getColumn("Last Updated").setResizable(false);
+        table1.getColumn("Updated By").setMaxWidth(100);
+        table1.getColumn("Updated By").setMinWidth(100);
+        table1.getColumn("Updated By").setResizable(false);
         table1.getColumn("% Annotated").setMaxWidth(100);
         table1.getColumn("% Annotated").setMinWidth(100);
         table1.getColumn("% Annotated").setResizable(false);
@@ -102,7 +114,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
                     new ParameterizedTypeReference<HashMap<String, Object>>() {
                     };
 
-            RequestEntity<Void> request = RequestEntity.get(new URI(annotatorUI.getHostURL() + "/documents?docText=*&fields=id&fields=filename&fields=category&fields=created&fields=lastUpdated&fields=annotatedBy&fields=percentAnnotated&fields=totalLines&fields=url"))
+            RequestEntity<Void> request = RequestEntity.get(new URI(annotatorUI.getHostURL() + "/documents?docText=*&fields=id&fields=filename&fields=category&fields=created&fields=lastUpdated&fields=annotatedBy&fields=percentAnnotated&fields=totalLines&fields=url&fields=project"))
                     .accept(MediaType.APPLICATION_JSON).build();
 
             ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
@@ -114,9 +126,11 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
             Collections.sort(documents, Tools.documentComparator);
 
             //clear out the table model before re-populating it with data
+            clearingTableModel = true;
             for (int r = tableModel.getRowCount() - 1; r >= 0; r--) {
                 tableModel.removeRow(r);
             }
+            clearingTableModel = false;
 
             for (Map doc : documents) {
                 String category = doc.containsKey("category") ? doc.get("category").toString() : "";
@@ -126,6 +140,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
                 String id = doc.get("id").toString();
                 String filename = doc.get("filename").toString();
                 String url = doc.containsKey("url") ? doc.get("url").toString() : "";
+                String project = doc.containsKey("project") ? doc.get("project").toString() : "UNASSIGNED";
                 long created = Long.parseLong(doc.get("created").toString());
                 long lastUpdated = Long.parseLong(doc.get("lastUpdated").toString());
                 String lastUpdatedStr = Tools.getFormattedDateTimeString(Instant.ofEpochMilli((long) doc.get("lastUpdated")));
@@ -145,7 +160,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
                     totalLines = doc.get("totalLines").toString();
                 }
 
-                tableModel.addRow(new Object[]{id, filename, url, category, lastUpdatedStr, annotatedBy, percentAnnotated, totalLines});
+                tableModel.addRow(new Object[]{id, filename, url, category, project, lastUpdatedStr, annotatedBy, percentAnnotated, totalLines});
             }
 
             scrollPane1.setPreferredSize(new Dimension(400, 200));
@@ -177,6 +192,20 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
                 crawlURLActionListener(actionEvent);
+            }
+        });
+
+        addToProjectButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                addToProject();
+            }
+        });
+
+        filterByProjectButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                filterByProject();
             }
         });
 
@@ -290,6 +319,63 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
         }
     }
 
+    public void filterByProject() {
+        String project = txtProject.getText().toLowerCase();
+        populate();
+        if (!Strings.isNullOrEmpty(project)) {
+            for (int r = tableModel.getRowCount() - 1; r >= 0; r--) {
+                String proj = tableModel.getValueAt(r, 4).toString().toLowerCase();
+                if (!proj.equals(project)) {
+                    tableModel.removeRow(r);
+                }
+            }
+        }
+    }
+
+    public void addToProject() {
+        try {
+            String project = txtProject.getText();
+            if (Strings.isNullOrEmpty(project)) {
+                JOptionPane.showMessageDialog(this, "Enter a project name...");
+                return;
+            }
+            if (table1.getSelectedRow() != -1) {
+                int[] rows = table1.getSelectedRows();
+                for (int r = 0; r < rows.length; r++) {
+                    String id = table1.getValueAt(rows[r], 0).toString();
+                    ParameterizedTypeReference<HashMap<String, Object>> responseType =
+                            new ParameterizedTypeReference<HashMap<String, Object>>() {
+                            };
+
+                    Map<String, Object> doc = new HashMap<>();
+                    doc.put("project", project);
+
+                    MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+                    body.add("metadata", doc);
+                    body.add("doNLP", false);
+
+                    RequestEntity<Map> request = RequestEntity.put(new URI(annotatorUI.getHostURL() + "/documents/metadata/" + id))
+                            .accept(MediaType.APPLICATION_JSON)
+                            .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA_VALUE)
+                            .body(body);
+
+                    ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
+
+                    if (response.getStatusCode() != HttpStatus.OK) {
+                        JOptionPane.showMessageDialog(this, "Failed to add document to project! Reason: " + response.getStatusCode());
+                    }
+                }
+                filterByProject();
+            } else {
+                JOptionPane.showMessageDialog(this, "Select a document...");
+            }
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            JOptionPane.showMessageDialog(annotatorUI, e.getResponseBodyAsString());
+        } catch (URISyntaxException e) {
+            JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
+        }
+    }
+
     public void deleteActionListener(ActionEvent evt) {
         try {
             if (table1.getSelectedRow() != -1 && JOptionPane.showConfirmDialog(this, "Are you sure (this action cannot be undone)?") == 0) {
@@ -338,32 +424,46 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
      */
     private void $$$setupUI$$$() {
         panel1 = new JPanel();
-        panel1.setLayout(new GridLayoutManager(4, 5, new Insets(0, 0, 0, 0), -1, -1));
+        panel1.setLayout(new GridLayoutManager(4, 9, new Insets(0, 0, 0, 0), -1, -1));
         scrollPane1 = new JScrollPane();
         scrollPane1.setHorizontalScrollBarPolicy(30);
-        panel1.add(scrollPane1, new GridConstraints(2, 0, 1, 5, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(1200, 600), new Dimension(1200, 600), null, 0, false));
+        panel1.add(scrollPane1, new GridConstraints(2, 0, 1, 9, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(1200, 600), new Dimension(1200, 600), null, 0, false));
         table1 = new JTable();
         scrollPane1.setViewportView(table1);
         final JLabel label1 = new JLabel();
         label1.setText("Resource URL:");
         panel1.add(label1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         textField1 = new JTextField();
-        panel1.add(textField1, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        textField1.setText("");
+        panel1.add(textField1, new GridConstraints(0, 1, 1, 5, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         loadURLButton = new JButton();
         loadURLButton.setText("Load URL");
-        panel1.add(loadURLButton, new GridConstraints(0, 2, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel1.add(loadURLButton, new GridConstraints(0, 6, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label2 = new JLabel();
         label2.setText("OR Select a Document From the List Below:");
         panel1.add(label2, new GridConstraints(1, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         crawlURLButton = new JButton();
         crawlURLButton.setText("Crawl URL");
-        panel1.add(crawlURLButton, new GridConstraints(0, 4, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        deleteButton = new JButton();
-        deleteButton.setText("Delete");
-        panel1.add(deleteButton, new GridConstraints(1, 4, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel1.add(crawlURLButton, new GridConstraints(0, 8, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         showNotApplicableDocumentsCheckBox = new JCheckBox();
         showNotApplicableDocumentsCheckBox.setText("Show Not Applicable Documents");
         panel1.add(showNotApplicableDocumentsCheckBox, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        txtProject = new JTextField();
+        panel1.add(txtProject, new GridConstraints(1, 4, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        final Spacer spacer1 = new Spacer();
+        panel1.add(spacer1, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final JLabel label3 = new JLabel();
+        label3.setText("Project:");
+        panel1.add(label3, new GridConstraints(1, 3, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        deleteButton = new JButton();
+        deleteButton.setText("Delete Selected Document(s)");
+        panel1.add(deleteButton, new GridConstraints(3, 8, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        addToProjectButton = new JButton();
+        addToProjectButton.setText("Add to Project");
+        panel1.add(addToProjectButton, new GridConstraints(1, 8, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        filterByProjectButton = new JButton();
+        filterByProjectButton.setText("Filter By Project");
+        panel1.add(filterByProjectButton, new GridConstraints(1, 6, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     }
 
     /**
@@ -411,7 +511,7 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
     @Override
     public void valueChanged(ListSelectionEvent listSelectionEvent) {
         try {
-            if (table1.getSelectedRow() != -1) {
+            if (table1.getSelectedRow() != -1 && !clearingTableModel) {
                 String id = table1.getValueAt(table1.getSelectedRow(), 0).toString();
 
                 ParameterizedTypeReference<HashMap<String, Object>> responseType =
