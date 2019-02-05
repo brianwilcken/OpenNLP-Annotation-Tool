@@ -47,6 +47,7 @@ public class Main extends javax.swing.JFrame {
     private AutoDetectionThreshold autoDetectionThreshold;
     private AnnotatedLinesTracker annotatedLinesTracker;
     private FindAndReplace findAndReplace;
+    private DependencyResolver dependencyResolver;
 
     private SizedStack<String> undoStates;
     private SizedStack<String> redoStates;
@@ -219,6 +220,13 @@ public class Main extends javax.swing.JFrame {
             annotatedLinesTracker = new AnnotatedLinesTracker(this);
         }
         return annotatedLinesTracker;
+    }
+
+    private DependencyResolver getDependencyResolver() {
+        if (dependencyResolver == null) {
+            dependencyResolver = new DependencyResolver(this);
+        }
+        return dependencyResolver;
     }
 
     private class PlaygroundKeyListener implements KeyListener {
@@ -890,6 +898,9 @@ public class Main extends javax.swing.JFrame {
         if (findAndReplace != null) {
             findAndReplace.reset();
         }
+        DependencyResolver resolver = getDependencyResolver();
+        resolver.populate(document.get("id").toString());
+        resolver.setVisible(true);
     }
 
     private boolean validateForSave() {

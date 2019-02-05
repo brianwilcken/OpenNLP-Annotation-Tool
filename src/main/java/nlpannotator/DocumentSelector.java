@@ -32,7 +32,7 @@ import java.time.Instant;
 import java.util.*;
 import java.util.List;
 
-public class DocumentSelector extends JFrame implements ListSelectionListener {
+public class DocumentSelector extends JFrame {
     private RestTemplate restTemplate;
     private JPanel panel1;
     private JList<String> list1;
@@ -172,7 +172,11 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
     }
 
     private void addEventListeners() {
-        table1.getSelectionModel().addListSelectionListener(this);
+        table1.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+            public void valueChanged(ListSelectionEvent event) {
+                listSelectActionListener(event);
+            }
+        });
 
         fileDrop = new FileDrop(table1, new FileDrop.Listener() {
             @Override
@@ -508,10 +512,9 @@ public class DocumentSelector extends JFrame implements ListSelectionListener {
         }
     }
 
-    @Override
-    public void valueChanged(ListSelectionEvent listSelectionEvent) {
+    public void listSelectActionListener(ListSelectionEvent listSelectionEvent) {
         try {
-            if (table1.getSelectedRow() != -1 && !clearingTableModel) {
+            if (listSelectionEvent.getValueIsAdjusting() && table1.getSelectedRow() != -1 && !clearingTableModel) {
                 String id = table1.getValueAt(table1.getSelectedRow(), 0).toString();
 
                 ParameterizedTypeReference<HashMap<String, Object>> responseType =
