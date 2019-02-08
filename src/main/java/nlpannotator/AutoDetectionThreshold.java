@@ -58,7 +58,7 @@ public class AutoDetectionThreshold extends JFrame {
      */
     private void $$$setupUI$$$() {
         sliderPanel = new JPanel();
-        sliderPanel.setLayout(new GridLayoutManager(2, 2, new Insets(0, 0, 0, 0), -1, -1));
+        sliderPanel.setLayout(new GridLayoutManager(2, 2, new Insets(20, 20, 20, 20), -1, -1));
         slider1 = new JSlider();
         slider1.setMajorTickSpacing(25);
         slider1.setMinorTickSpacing(5);
