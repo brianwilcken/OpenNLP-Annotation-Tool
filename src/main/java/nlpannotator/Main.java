@@ -225,6 +225,14 @@ public class Main extends javax.swing.JFrame {
     private DependencyResolver getDependencyResolver() {
         if (dependencyResolver == null) {
             dependencyResolver = new DependencyResolver(this);
+        } else {
+            Point location = dependencyResolver.getLocationOnScreen();
+            Dimension dim = dependencyResolver.getSize();
+            dependencyResolver.setVisible(false);
+            dependencyResolver.dispose();
+            dependencyResolver = new DependencyResolver(this);
+            dependencyResolver.setLocation(location);
+            dependencyResolver.setSize(dim);
         }
         return dependencyResolver;
     }
