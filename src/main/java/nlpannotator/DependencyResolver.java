@@ -39,7 +39,7 @@ public class DependencyResolver extends JFrame {
     private JComboBox ddlAssets2;
     private JComboBox ddlAssets3;
 
-    private Main annotatorUI;
+    private Main mainUI;
     private DependencyThreshold dependencyThreshold;
     private RestTemplate restTemplate;
     private List<Map<String, Object>> dependencies;
@@ -54,8 +54,8 @@ public class DependencyResolver extends JFrame {
     private DefaultTableModel tblProvidingModel;
     private DefaultTableModel tblDependentModel;
 
-    public DependencyResolver(Main annotatorUI) {
-        this.annotatorUI = annotatorUI;
+    public DependencyResolver(Main mainUI) {
+        this.mainUI = mainUI;
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         restTemplate = new RestTemplate(requestFactory);
 
@@ -68,7 +68,7 @@ public class DependencyResolver extends JFrame {
 
         addEventListeners();
         setTitle("Resolve Extracted Dependencies");
-        setLocation(annotatorUI.getLocationOnScreen());
+        setLocation(mainUI.getLocationOnScreen());
         setContentPane(panel1);
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
         pack();
@@ -121,7 +121,7 @@ public class DependencyResolver extends JFrame {
                     new ParameterizedTypeReference<HashMap<String, Object>>() {
                     };
 
-            RequestEntity<Void> request = RequestEntity.get(new URI(annotatorUI.getHostURL() + "/documents/dependencies/relations/BaseLink"))
+            RequestEntity<Void> request = RequestEntity.get(new URI(mainUI.getHostURL() + "/documents/dependencies/relations/BaseLink"))
                     .accept(MediaType.APPLICATION_JSON).build();
 
             ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
@@ -132,7 +132,7 @@ public class DependencyResolver extends JFrame {
 
             populateAssetsDropDownList(ddlAssets, ddlAssetsModel, "BaseLink");
         } catch (URISyntaxException e) {
-            JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
+            JOptionPane.showMessageDialog(mainUI, e.getMessage());
         }
     }
 
@@ -143,7 +143,7 @@ public class DependencyResolver extends JFrame {
                     new ParameterizedTypeReference<HashMap<String, Object>>() {
                     };
 
-            RequestEntity<Void> request = RequestEntity.get(new URI(annotatorUI.getHostURL() + "/documents/dependencies/" + docId))
+            RequestEntity<Void> request = RequestEntity.get(new URI(mainUI.getHostURL() + "/documents/dependencies/" + docId))
                     .accept(MediaType.APPLICATION_JSON).build();
 
             ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
@@ -155,14 +155,14 @@ public class DependencyResolver extends JFrame {
             populateDependenciesDropDownList();
             ddlDependenciesSelectionChanged(null);
         } catch (URISyntaxException e) {
-            JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
+            JOptionPane.showMessageDialog(mainUI, e.getMessage());
         }
     }
 
     public void reprocessRelations(double similarity, double searchLines) {
-        ProcessMonitor procMon = annotatorUI.getProcessMonitor();
+        ProcessMonitor procMon = mainUI.getProcessMonitor();
         procMon.setVisible(true);
-        String procId = procMon.addProcess("(" + Instant.now() + ") Resolving Dependencies: " + annotatorUI.document.get("filename").toString());
+        String procId = procMon.addProcess("(" + Instant.now() + ") Resolving Dependencies: " + mainUI.document.get("filename").toString());
         new Thread(() -> {
             try {
                 MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
@@ -173,7 +173,7 @@ public class DependencyResolver extends JFrame {
                         new ParameterizedTypeReference<HashMap<String, Object>>() {
                         };
 
-                RequestEntity<Map> request = RequestEntity.put(new URI(annotatorUI.getHostURL() + "/documents/relations/" + docId))
+                RequestEntity<Map> request = RequestEntity.put(new URI(mainUI.getHostURL() + "/documents/relations/" + docId))
                         .accept(MediaType.APPLICATION_JSON)
                         .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA_VALUE)
                         .body(body);
@@ -186,7 +186,7 @@ public class DependencyResolver extends JFrame {
                     JOptionPane.showMessageDialog(this, "Failure generating dependencies.");
                 }
             } catch (URISyntaxException e) {
-                JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
+                JOptionPane.showMessageDialog(mainUI, e.getMessage());
             } finally {
                 procMon.removeProcess(procId);
             }
@@ -495,7 +495,7 @@ public class DependencyResolver extends JFrame {
             committedDependency.put("relationState", "REVERSED");
         }
         committedDependency.put("relationId", selectedDependency.get("relationId"));
-        committedDependency.put("docId", annotatorUI.document.get("id"));
+        committedDependency.put("docId", mainUI.document.get("id"));
         fixUUID(committedDependency);
 
         commitDependency(committedDependency);
@@ -553,7 +553,7 @@ public class DependencyResolver extends JFrame {
             Map<String, Object> committedDependency = new HashMap<>();
             committedDependency.put("relationState", "IGNORED");
             committedDependency.put("relationId", selectedDependency.get("relationId"));
-            committedDependency.put("docId", annotatorUI.document.get("id"));
+            committedDependency.put("docId", mainUI.document.get("id"));
 
             commitDependency(committedDependency);
         }
@@ -568,7 +568,7 @@ public class DependencyResolver extends JFrame {
                     new ParameterizedTypeReference<HashMap<String, Object>>() {
                     };
 
-            RequestEntity<Map> request = RequestEntity.put(new URI(annotatorUI.getHostURL() + "/documents/dependencies"))
+            RequestEntity<Map> request = RequestEntity.put(new URI(mainUI.getHostURL() + "/documents/dependencies"))
                     .accept(MediaType.APPLICATION_JSON)
                     .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA_VALUE)
                     .body(body);

@@ -12,19 +12,19 @@ public class AutoDetectionThreshold extends JFrame {
     private JSlider slider1;
     private JButton autoDetectNERButton;
     private JPanel sliderPanel;
-    private Main annotatorUI;
+    private Main mainUI;
 
     public static void main(String[] args) {
         AutoDetectionThreshold threshold = new AutoDetectionThreshold(null);
     }
 
-    public AutoDetectionThreshold(Main annotatorUI) {
-        this.annotatorUI = annotatorUI;
+    public AutoDetectionThreshold(Main mainUI) {
+        this.mainUI = mainUI;
 
         setTitle("Auto Detection Threshold");
         setContentPane(sliderPanel);
-        if (annotatorUI != null) {
-            setLocation(annotatorUI.getLocationOnScreen());
+        if (mainUI != null) {
+            setLocation(mainUI.getLocationOnScreen());
         }
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
         pack();
@@ -37,7 +37,7 @@ public class AutoDetectionThreshold extends JFrame {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
                 int threshold = slider1.getValue();
-                annotatorUI.autoAnnotateDocument(threshold);
+                mainUI.autoAnnotateDocument(threshold);
             }
         });
     }

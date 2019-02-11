@@ -43,7 +43,7 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
     private JButton loadDictionaryButton;
     private JButton nextButton;
     private JButton previousButton;
-    private Main annotator;
+    private Main main;
 
     private RestTemplate restTemplate;
 
@@ -51,9 +51,9 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
 
     private DefaultListModel<String> found;
 
-    public FindAndReplace(String frame, Main annotator) {
+    public FindAndReplace(String frame, Main main) {
         super(frame);
-        this.annotator = annotator;
+        this.main = main;
         found = new DefaultListModel<>();
 
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
@@ -66,7 +66,7 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
 
         setTitle("Find And Replace");
         setContentPane(jPanelFindAndReplace);
-        setLocation(annotator.getLocationOnScreen());
+        setLocation(main.getLocationOnScreen());
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
         pack();
     }
@@ -153,7 +153,7 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
         List selections = lsFound.getSelectedValuesList();
         String replace = txtReplace.getText();
 
-        annotator.replaceAllText(selections, replace);
+        main.replaceAllText(selections, replace);
 
         removeActionPerformed(actionEvent);
         addFoundElement(replace);
@@ -161,13 +161,13 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
 
     private void navigatePreviousActionPerformed(ActionEvent actionEvent) {
         if (locMap != null) {
-            annotator.navigatePrevious(locMap);
+            main.navigatePrevious(locMap);
         }
     }
 
     private void navigateNextActionPerformed(ActionEvent actionEvent) {
         if (locMap != null) {
-            annotator.navigateNext(locMap);
+            main.navigateNext(locMap);
         }
     }
 
@@ -176,23 +176,23 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
         for (Object selected : selections) {
             found.removeElement(selected);
         }
-        // annotator.removeHighlights(selections);
+        // main.removeHighlights(selections);
     }
 
     private void resetActionPerformed(ActionEvent actionEvent) {
-        //annotator.removeHighlights(Arrays.asList(found.toArray()));
+        //main.removeHighlights(Arrays.asList(found.toArray()));
         found.clear();
     }
 
     private void loadDictionaryActionPerformed(ActionEvent evt) {
         try {
-            String id = annotator.document.get("id").toString();
+            String id = main.document.get("id").toString();
 
             ParameterizedTypeReference<HashMap<String, Object>> responseType =
                     new ParameterizedTypeReference<HashMap<String, Object>>() {
                     };
 
-            RequestEntity<Void> request = RequestEntity.get(new URI(annotator.getHostURL() + "/documents/entities/dictionary/" + id))
+            RequestEntity<Void> request = RequestEntity.get(new URI(main.getHostURL() + "/documents/entities/dictionary/" + id))
                     .accept(MediaType.APPLICATION_JSON).build();
 
             ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
@@ -208,7 +208,7 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
                 }
             }
 
-            List categories = annotator.getDocumentCategories();
+            List categories = main.getDocumentCategories();
             for (Object category : categories) {
                 List<String> categoryEntities = new ArrayList<>();
                 String wordsText = Tools.getResource("dictionary/" + category + ".txt");
@@ -237,7 +237,7 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
                 loadSearchTerms(categoryEntities);
             }
         } catch (URISyntaxException e) {
-            JOptionPane.showMessageDialog(annotator, e.getMessage());
+            JOptionPane.showMessageDialog(main, e.getMessage());
         }
     }
 
@@ -269,11 +269,11 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
     @Override
     public void valueChanged(ListSelectionEvent listSelectionEvent) {
         List selections = lsFound.getSelectedValuesList();
-        annotator.removeHighlights();
-        annotator.highlightAnnotations();
+        main.removeHighlights();
+        main.highlightAnnotations();
 
-        locMap = annotator.getLocationMap(selections);
-        annotator.highlightFound(locMap);
+        locMap = main.getLocationMap(selections);
+        main.highlightFound(locMap);
     }
 
     public TreeMap<Integer, String> getLocationMap() {

@@ -47,13 +47,13 @@ public class DocumentSelector extends JFrame {
     private JTextField txtProject;
     private JButton filterByProjectButton;
     private List<Map<String, Object>> documents;
-    private Main annotatorUI;
+    private Main mainUI;
     private FileDrop fileDrop;
     private DefaultTableModel tableModel;
     private boolean clearingTableModel;
 
-    public DocumentSelector(Main annotatorUI) {
-        this.annotatorUI = annotatorUI;
+    public DocumentSelector(Main mainUI) {
+        this.mainUI = mainUI;
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         restTemplate = new RestTemplate(requestFactory);
 
@@ -62,7 +62,7 @@ public class DocumentSelector extends JFrame {
 
         addEventListeners();
         setTitle("Document Selector");
-        setLocation(annotatorUI.getLocationOnScreen());
+        setLocation(mainUI.getLocationOnScreen());
         setContentPane(panel1);
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
         pack();
@@ -114,7 +114,7 @@ public class DocumentSelector extends JFrame {
                     new ParameterizedTypeReference<HashMap<String, Object>>() {
                     };
 
-            RequestEntity<Void> request = RequestEntity.get(new URI(annotatorUI.getHostURL() + "/documents?docText=*&fields=id&fields=filename&fields=category&fields=created&fields=lastUpdated&fields=annotatedBy&fields=percentAnnotated&fields=totalLines&fields=url&fields=project"))
+            RequestEntity<Void> request = RequestEntity.get(new URI(mainUI.getHostURL() + "/documents?docText=*&fields=id&fields=filename&fields=category&fields=created&fields=lastUpdated&fields=annotatedBy&fields=percentAnnotated&fields=totalLines&fields=url&fields=project"))
                     .accept(MediaType.APPLICATION_JSON).build();
 
             ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
@@ -165,9 +165,9 @@ public class DocumentSelector extends JFrame {
 
             scrollPane1.setPreferredSize(new Dimension(400, 200));
         } catch (URISyntaxException e) {
-            JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
+            JOptionPane.showMessageDialog(mainUI, e.getMessage());
         } catch (ResourceAccessException e) {
-            JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
+            JOptionPane.showMessageDialog(mainUI, e.getMessage());
         }
     }
 
@@ -229,7 +229,7 @@ public class DocumentSelector extends JFrame {
     }
 
     private void uploadFiles(File[] files) {
-        ProcessMonitor procMon = annotatorUI.getProcessMonitor();
+        ProcessMonitor procMon = mainUI.getProcessMonitor();
         procMon.setVisible(true);
         String procId = procMon.addProcess("(" + Instant.now() + ") Uploading Files");
         new Thread(() -> {
@@ -250,28 +250,28 @@ public class DocumentSelector extends JFrame {
 
                     ResponseEntity<HashMap<String, Object>> response = null;
                     try {
-                        response = restTemplate.exchange(annotatorUI.getHostURL() + "/documents", HttpMethod.POST, request, responseType);
+                        response = restTemplate.exchange(mainUI.getHostURL() + "/documents", HttpMethod.POST, request, responseType);
                     } catch (HttpClientErrorException | HttpServerErrorException e) {
-                        JOptionPane.showMessageDialog(annotatorUI, "Failed to upload file: (" + files[i].getName() + ") Reason: " + e.getResponseBodyAsString());
+                        JOptionPane.showMessageDialog(mainUI, "Failed to upload file: (" + files[i].getName() + ") Reason: " + e.getResponseBodyAsString());
                     }
 
                     if (response.getStatusCode() != HttpStatus.OK) {
-                        JOptionPane.showMessageDialog(annotatorUI, "Failed to upload file: (" + files[i].getName() + ") Reason: " + response.getBody().get("data").toString());
+                        JOptionPane.showMessageDialog(mainUI, "Failed to upload file: (" + files[i].getName() + ") Reason: " + response.getBody().get("data").toString());
                     }
                 }
             } catch (ResourceAccessException e) {
-                JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
+                JOptionPane.showMessageDialog(mainUI, e.getMessage());
             } finally {
                 procMon.removeProcess(procId);
             }
-            annotatorUI.loadActionPerformed(null);
+            mainUI.openDocument();
         }).start();
     }
 
     public void loadURLActionListener(ActionEvent evt) {
         textField1.setBackground(new Color(Color.WHITE.getRGB()));
         String urlString = textField1.getText();
-        ProcessMonitor procMon = annotatorUI.getProcessMonitor();
+        ProcessMonitor procMon = mainUI.getProcessMonitor();
         procMon.setVisible(true);
         String procId = procMon.addProcess("(" + Instant.now() + ") Loading URL: " + urlString);
         new Thread(() -> {
@@ -285,19 +285,19 @@ public class DocumentSelector extends JFrame {
                 MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
                 body.add("url", url.toString());
 
-                RequestEntity<MultiValueMap<String, Object>> request = RequestEntity.post(new URI(annotatorUI.getHostURL() + "/documents/url"))
+                RequestEntity<MultiValueMap<String, Object>> request = RequestEntity.post(new URI(mainUI.getHostURL() + "/documents/url"))
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .body(body);
 
                 ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
-                annotatorUI.loadActionPerformed(null);
+                mainUI.openDocument();
             } catch (MalformedURLException e) {
                 textField1.setBackground(new Color(Color.RED.getRGB()));
             } catch (HttpClientErrorException | HttpServerErrorException e) {
-                JOptionPane.showMessageDialog(annotatorUI, e.getResponseBodyAsString());
+                JOptionPane.showMessageDialog(mainUI, e.getResponseBodyAsString());
             } catch (Exception e) {
-                JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
+                JOptionPane.showMessageDialog(mainUI, e.getMessage());
             } finally {
                 procMon.removeProcess(procId);
             }
@@ -319,7 +319,7 @@ public class DocumentSelector extends JFrame {
         } catch (MalformedURLException e) {
             textField1.setBackground(new Color(Color.RED.getRGB()));
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
+            JOptionPane.showMessageDialog(mainUI, e.getMessage());
         }
     }
 
@@ -358,7 +358,7 @@ public class DocumentSelector extends JFrame {
                     body.add("metadata", doc);
                     body.add("doNLP", false);
 
-                    RequestEntity<Map> request = RequestEntity.put(new URI(annotatorUI.getHostURL() + "/documents/metadata/" + id))
+                    RequestEntity<Map> request = RequestEntity.put(new URI(mainUI.getHostURL() + "/documents/metadata/" + id))
                             .accept(MediaType.APPLICATION_JSON)
                             .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA_VALUE)
                             .body(body);
@@ -374,9 +374,9 @@ public class DocumentSelector extends JFrame {
                 JOptionPane.showMessageDialog(this, "Select a document...");
             }
         } catch (HttpClientErrorException | HttpServerErrorException e) {
-            JOptionPane.showMessageDialog(annotatorUI, e.getResponseBodyAsString());
+            JOptionPane.showMessageDialog(mainUI, e.getResponseBodyAsString());
         } catch (URISyntaxException e) {
-            JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
+            JOptionPane.showMessageDialog(mainUI, e.getMessage());
         }
     }
 
@@ -390,13 +390,13 @@ public class DocumentSelector extends JFrame {
                             new ParameterizedTypeReference<HashMap<String, Object>>() {
                             };
 
-                    RequestEntity<Void> request = RequestEntity.delete(new URI(annotatorUI.getHostURL() + "/documents/" + id))
+                    RequestEntity<Void> request = RequestEntity.delete(new URI(mainUI.getHostURL() + "/documents/" + id))
                             .accept(MediaType.APPLICATION_JSON).build();
 
                     ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
 
                     if (response.getStatusCode() == HttpStatus.NO_CONTENT) {
-                        annotatorUI.clearIfDeleted(id);
+                        mainUI.clearIfDeleted(id);
                     } else {
                         JOptionPane.showMessageDialog(this, "Failed to delete document! Reason: " + response.getStatusCode());
                     }
@@ -406,9 +406,9 @@ public class DocumentSelector extends JFrame {
                 JOptionPane.showMessageDialog(this, "Select a document...");
             }
         } catch (HttpClientErrorException | HttpServerErrorException e) {
-            JOptionPane.showMessageDialog(annotatorUI, e.getResponseBodyAsString());
+            JOptionPane.showMessageDialog(mainUI, e.getResponseBodyAsString());
         } catch (URISyntaxException e) {
-            JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
+            JOptionPane.showMessageDialog(mainUI, e.getMessage());
         }
     }
 
@@ -487,7 +487,7 @@ public class DocumentSelector extends JFrame {
 
         @Override
         public void run() {
-            ProcessMonitor procMon = annotatorUI.getProcessMonitor();
+            ProcessMonitor procMon = mainUI.getProcessMonitor();
             procMon.setVisible(true);
             String procId = procMon.addProcess("(" + Instant.now() + ") Crawling URL: " + url);
             try {
@@ -498,14 +498,14 @@ public class DocumentSelector extends JFrame {
                 MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
                 body.add("url", url);
 
-                RequestEntity<MultiValueMap<String, Object>> request = RequestEntity.post(new URI(annotatorUI.getHostURL() + "/documents/crawl"))
+                RequestEntity<MultiValueMap<String, Object>> request = RequestEntity.post(new URI(mainUI.getHostURL() + "/documents/crawl"))
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .body(body);
 
                 ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
             } catch (URISyntaxException e) {
-                JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
+                JOptionPane.showMessageDialog(mainUI, e.getMessage());
             } finally {
                 procMon.removeProcess(procId);
             }
@@ -521,7 +521,7 @@ public class DocumentSelector extends JFrame {
                         new ParameterizedTypeReference<HashMap<String, Object>>() {
                         };
 
-                RequestEntity<Void> request = RequestEntity.get(new URI(annotatorUI.getHostURL() + "/documents?id=" + id))
+                RequestEntity<Void> request = RequestEntity.get(new URI(mainUI.getHostURL() + "/documents?id=" + id))
                         .accept(MediaType.APPLICATION_JSON).build();
 
                 ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
@@ -531,12 +531,12 @@ public class DocumentSelector extends JFrame {
                 List<Map<String, Object>> document = ((List<Map<String, Object>>) jsonDict.get("data"));
 
                 if (document.size() > 0) {
-                    annotatorUI.reloadHistory();
-                    annotatorUI.loadDocument(document.get(0));
+                    mainUI.reloadHistory();
+                    mainUI.loadDocument(document.get(0));
                 }
             }
         } catch (URISyntaxException e) {
-            JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
+            JOptionPane.showMessageDialog(mainUI, e.getMessage());
         }
     }
 

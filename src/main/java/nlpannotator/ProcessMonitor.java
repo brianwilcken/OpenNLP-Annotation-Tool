@@ -9,17 +9,17 @@ import java.awt.*;
 public class ProcessMonitor extends JFrame {
     private JList list1;
     private JPanel panel1;
-    private Main annotatorUI;
+    private Main mainUI;
 
     private DefaultListModel<ProcessItem> itemsModel = new DefaultListModel<>();
 
-    public ProcessMonitor(Main annotatorUI) {
-        this.annotatorUI = annotatorUI;
+    public ProcessMonitor(Main mainUI) {
+        this.mainUI = mainUI;
 
         populate();
 
         setTitle("Process Monitor");
-        setLocation(annotatorUI.getLocationOnScreen());
+        setLocation(mainUI.getLocationOnScreen());
         setContentPane(panel1);
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
         pack();

@@ -26,17 +26,17 @@ public class HistoryViewer extends JFrame {
     private RestTemplate restTemplate;
     private JTable table1;
     private JPanel panel1;
-    private Main annotatorUI;
+    private Main mainUI;
 
-    public HistoryViewer(Main annotatorUI) {
+    public HistoryViewer(Main mainUI) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         restTemplate = new RestTemplate(requestFactory);
-        this.annotatorUI = annotatorUI;
+        this.mainUI = mainUI;
 
         setTitle("History Viewer");
         setContentPane(panel1);
-        if (annotatorUI != null) {
-            setLocation(annotatorUI.getLocationOnScreen());
+        if (mainUI != null) {
+            setLocation(mainUI.getLocationOnScreen());
         }
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
         pack();
@@ -63,7 +63,7 @@ public class HistoryViewer extends JFrame {
                     new ParameterizedTypeReference<HashMap<String, Object>>() {
                     };
 
-            RequestEntity<Void> request = RequestEntity.get(new URI(annotatorUI.getHostURL() + "/documents/history/" + docId))
+            RequestEntity<Void> request = RequestEntity.get(new URI(mainUI.getHostURL() + "/documents/history/" + docId))
                     .accept(MediaType.APPLICATION_JSON).build();
 
             ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
@@ -91,7 +91,7 @@ public class HistoryViewer extends JFrame {
             table1.getColumn("ID").setResizable(false);
             table1.setDefaultEditor(Object.class, null);
         } catch (URISyntaxException e) {
-            JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
+            JOptionPane.showMessageDialog(mainUI, e.getMessage());
         }
     }
 
@@ -101,7 +101,7 @@ public class HistoryViewer extends JFrame {
                     new ParameterizedTypeReference<HashMap<String, Object>>() {
                     };
 
-            RequestEntity<Void> request = RequestEntity.get(new URI(annotatorUI.getHostURL() + "/documents/annotate/history/" + historyId))
+            RequestEntity<Void> request = RequestEntity.get(new URI(mainUI.getHostURL() + "/documents/annotate/history/" + historyId))
                     .accept(MediaType.APPLICATION_JSON).build();
 
             ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
@@ -112,9 +112,9 @@ public class HistoryViewer extends JFrame {
 
             String annotated = history.get(0).get("annotated").toString();
 
-            annotatorUI.updateAnnotation(annotated);
+            mainUI.updateAnnotation(annotated);
         } catch (URISyntaxException e) {
-            JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
+            JOptionPane.showMessageDialog(mainUI, e.getMessage());
         }
     }
 

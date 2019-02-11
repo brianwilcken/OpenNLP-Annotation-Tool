@@ -29,16 +29,16 @@ public class MetadataEditor extends JFrame {
     private JButton addRowButton;
     private JButton keepChangesButton;
     private JTable entityTable;
-    private Main annotatorUI;
+    private Main mainUI;
 
-    public MetadataEditor(Main annotatorUI) {
+    public MetadataEditor(Main mainUI) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         restTemplate = new RestTemplate(requestFactory);
-        this.annotatorUI = annotatorUI;
+        this.mainUI = mainUI;
 
         setTitle("Metadata Editor");
         setContentPane(panel1);
-        setLocation(annotatorUI.getLocationOnScreen());
+        setLocation(mainUI.getLocationOnScreen());
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
         pack();
         setVisible(true);
@@ -76,7 +76,7 @@ public class MetadataEditor extends JFrame {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
                 Map<Object, Object> doc = (Map<Object, Object>) tableModel.getDataVector().stream().collect(Collectors.toMap(p -> ((Vector) p).get(0), p -> ((Vector) p).get(1)));
-                annotatorUI.updateMetadata(doc);
+                mainUI.updateMetadata(doc);
                 setVisible(false);
             }
         });
@@ -118,7 +118,7 @@ public class MetadataEditor extends JFrame {
                     new ParameterizedTypeReference<HashMap<String, Object>>() {
                     };
 
-            RequestEntity<Void> request = RequestEntity.get(new URI(annotatorUI.getHostURL() + "/documents/entities/" + docId))
+            RequestEntity<Void> request = RequestEntity.get(new URI(mainUI.getHostURL() + "/documents/entities/" + docId))
                     .accept(MediaType.APPLICATION_JSON).build();
 
             ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
@@ -129,7 +129,7 @@ public class MetadataEditor extends JFrame {
 
             return entities;
         } catch (URISyntaxException e) {
-            JOptionPane.showMessageDialog(annotatorUI, e.getMessage());
+            JOptionPane.showMessageDialog(mainUI, e.getMessage());
             return null;
         }
     }

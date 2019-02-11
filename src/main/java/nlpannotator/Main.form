@@ -1,0 +1,317 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="nlpannotator.Main">
+  <grid id="27dc6" binding="mainPanel" layout-manager="GridLayoutManager" row-count="5" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+    <margin top="0" left="0" bottom="0" right="0"/>
+    <constraints>
+      <xy x="20" y="20" width="1270" height="400"/>
+    </constraints>
+    <properties/>
+    <border type="none"/>
+    <children>
+      <toolbar id="375ce" binding="topbar">
+        <constraints>
+          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false">
+            <preferred-size width="-1" height="20"/>
+          </grid>
+        </constraints>
+        <properties/>
+        <border type="none"/>
+        <children>
+          <component id="6bffc" class="javax.swing.JButton" binding="saveButton" default-binding="true">
+            <constraints/>
+            <properties>
+              <text value="Save"/>
+            </properties>
+          </component>
+          <component id="6ba68" class="javax.swing.JButton" binding="openButton" default-binding="true">
+            <constraints/>
+            <properties>
+              <text value="Open"/>
+            </properties>
+          </component>
+          <component id="7ca4e" class="javax.swing.JButton" binding="resetButton" default-binding="true">
+            <constraints/>
+            <properties>
+              <text value="Reset"/>
+            </properties>
+          </component>
+          <component id="e252a" class="javax.swing.JButton" binding="deleteButton" default-binding="true">
+            <constraints/>
+            <properties>
+              <text value="Delete"/>
+            </properties>
+          </component>
+          <component id="c6ba9" class="javax.swing.JToolBar$Separator">
+            <constraints/>
+            <properties/>
+          </component>
+          <component id="dc365" class="javax.swing.JButton" binding="downloadOriginalButton" default-binding="true">
+            <constraints/>
+            <properties>
+              <text value="Download Original"/>
+            </properties>
+          </component>
+          <component id="b1c2e" class="javax.swing.JToolBar$Separator">
+            <constraints/>
+            <properties/>
+          </component>
+          <component id="dfa75" class="javax.swing.JButton" binding="findReplaceButton" default-binding="true">
+            <constraints/>
+            <properties>
+              <text value="Find/Replace"/>
+            </properties>
+          </component>
+          <component id="a24aa" class="javax.swing.JButton" binding="undoButton" default-binding="true">
+            <constraints/>
+            <properties>
+              <text value="Undo"/>
+            </properties>
+          </component>
+          <component id="c06b0" class="javax.swing.JButton" binding="redoButton" default-binding="true">
+            <constraints/>
+            <properties>
+              <text value="Redo"/>
+            </properties>
+          </component>
+          <component id="43016" class="javax.swing.JToolBar$Separator">
+            <constraints/>
+            <properties/>
+          </component>
+          <component id="e426b" class="javax.swing.JButton" binding="historyButton" default-binding="true">
+            <constraints/>
+            <properties>
+              <text value="History"/>
+            </properties>
+          </component>
+          <component id="35ca6" class="javax.swing.JButton" binding="metadataButton" default-binding="true">
+            <constraints/>
+            <properties>
+              <text value="Metadata"/>
+            </properties>
+          </component>
+          <component id="a055b" class="javax.swing.JToolBar$Separator">
+            <constraints/>
+            <properties/>
+          </component>
+          <component id="1a814" class="javax.swing.JToolBar$Separator">
+            <constraints/>
+            <properties/>
+          </component>
+          <component id="d712e" class="javax.swing.JButton" binding="showProcessMonitorButton" default-binding="true">
+            <constraints/>
+            <properties>
+              <text value="Show Process Monitor"/>
+            </properties>
+          </component>
+        </children>
+      </toolbar>
+      <scrollpane id="5c37c">
+        <constraints>
+          <grid row="3" column="0" row-span="1" col-span="1" vsize-policy="7" hsize-policy="7" anchor="0" fill="3" indent="0" use-parent-layout="false">
+            <preferred-size width="1200" height="-1"/>
+          </grid>
+        </constraints>
+        <properties/>
+        <border type="none"/>
+        <children>
+          <component id="3c849" class="javax.swing.JTextPane" binding="playground">
+            <constraints/>
+            <properties>
+              <editable value="false"/>
+            </properties>
+          </component>
+        </children>
+      </scrollpane>
+      <grid id="c49dd" layout-manager="GridLayoutManager" row-count="5" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+        <margin top="0" left="0" bottom="0" right="0"/>
+        <constraints>
+          <grid row="0" column="1" row-span="4" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+        </constraints>
+        <properties/>
+        <border type="none"/>
+        <children>
+          <component id="d260c" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false">
+                <preferred-size width="405" height="16"/>
+              </grid>
+            </constraints>
+            <properties>
+              <text value="Annotation Tag:"/>
+            </properties>
+          </component>
+          <component id="70c54" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false">
+                <preferred-size width="405" height="16"/>
+              </grid>
+            </constraints>
+            <properties>
+              <text value="Document Categories:"/>
+            </properties>
+          </component>
+          <vspacer id="f6e6e">
+            <constraints>
+              <grid row="4" column="0" row-span="1" col-span="1" vsize-policy="6" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false">
+                <preferred-size width="405" height="14"/>
+              </grid>
+            </constraints>
+          </vspacer>
+          <scrollpane id="53285">
+            <constraints>
+              <grid row="3" column="0" row-span="1" col-span="1" vsize-policy="7" hsize-policy="7" anchor="0" fill="3" indent="0" use-parent-layout="false">
+                <preferred-size width="405" height="128"/>
+              </grid>
+            </constraints>
+            <properties/>
+            <border type="none"/>
+            <children>
+              <component id="7f8d1" class="javax.swing.JList" binding="doccat">
+                <constraints/>
+                <properties/>
+              </component>
+            </children>
+          </scrollpane>
+          <scrollpane id="36dd2">
+            <constraints>
+              <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="7" hsize-policy="7" anchor="0" fill="3" indent="0" use-parent-layout="false">
+                <preferred-size width="405" height="360"/>
+              </grid>
+            </constraints>
+            <properties/>
+            <border type="none"/>
+            <children>
+              <component id="b9064" class="javax.swing.JTree" binding="typeTree">
+                <constraints/>
+                <properties/>
+              </component>
+            </children>
+          </scrollpane>
+        </children>
+      </grid>
+      <toolbar id="598d0" binding="midbar">
+        <constraints>
+          <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false">
+            <preferred-size width="-1" height="20"/>
+          </grid>
+        </constraints>
+        <properties/>
+        <border type="none"/>
+        <children>
+          <component id="d483a" class="javax.swing.JButton" binding="runNLPPipelineButton" default-binding="true">
+            <constraints/>
+            <properties>
+              <text value="Run NLP Pipeline"/>
+            </properties>
+          </component>
+          <component id="77008" class="javax.swing.JToolBar$Separator">
+            <constraints/>
+            <properties/>
+          </component>
+          <component id="b3866" class="javax.swing.JButton" binding="entityAutoDetectionButton" default-binding="true">
+            <constraints/>
+            <properties>
+              <text value="Entity Auto-Detection"/>
+            </properties>
+          </component>
+          <component id="19568" class="javax.swing.JToolBar$Separator">
+            <constraints/>
+            <properties/>
+          </component>
+          <component id="6a804" class="javax.swing.JButton" binding="trainNERModelButton" default-binding="true">
+            <constraints/>
+            <properties>
+              <text value="Train NER Model"/>
+            </properties>
+          </component>
+          <component id="2c02e" class="javax.swing.JButton" binding="trainDocCatModelButton" default-binding="true">
+            <constraints/>
+            <properties>
+              <text value="Train DocCat Model"/>
+            </properties>
+          </component>
+          <component id="b90f8" class="javax.swing.JToolBar$Separator">
+            <constraints/>
+            <properties/>
+          </component>
+          <component id="6c26f" class="javax.swing.JButton" binding="dependencyResolverButton" default-binding="true">
+            <constraints/>
+            <properties>
+              <text value="Dependency Resolver"/>
+            </properties>
+          </component>
+        </children>
+      </toolbar>
+      <toolbar id="a03e6" binding="lowbar">
+        <constraints>
+          <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false">
+            <preferred-size width="-1" height="20"/>
+          </grid>
+        </constraints>
+        <properties/>
+        <border type="none"/>
+        <children>
+          <component id="b9d8e" class="javax.swing.JButton" binding="annotateSingleF1Button" default-binding="true">
+            <constraints/>
+            <properties>
+              <text value="Annotate Single (F1)"/>
+            </properties>
+          </component>
+          <component id="9c21" class="javax.swing.JButton" binding="annotateAllF2Button" default-binding="true">
+            <constraints/>
+            <properties>
+              <text value="Annotate All (F2)"/>
+            </properties>
+          </component>
+          <component id="15f3e" class="javax.swing.JToolBar$Separator">
+            <constraints/>
+            <properties/>
+          </component>
+          <component id="93bef" class="javax.swing.JButton" binding="deleteAnnotationF3Button" default-binding="true">
+            <constraints/>
+            <properties>
+              <text value="Delete Annotation (F3)"/>
+            </properties>
+          </component>
+          <component id="b3f11" class="javax.swing.JButton" binding="deleteAllAnnotationsF4Button" default-binding="true">
+            <constraints/>
+            <properties>
+              <text value="Delete All Annotations (F4)"/>
+            </properties>
+          </component>
+          <component id="928d8" class="javax.swing.JToolBar$Separator">
+            <constraints/>
+            <properties/>
+          </component>
+          <component id="dd1ee" class="javax.swing.JButton" binding="annotationsTrackerButton" default-binding="true">
+            <constraints/>
+            <properties>
+              <text value="Annotations Tracker"/>
+            </properties>
+          </component>
+        </children>
+      </toolbar>
+      <toolbar id="63c96" binding="botbar">
+        <constraints>
+          <grid row="4" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false">
+            <preferred-size width="-1" height="20"/>
+          </grid>
+        </constraints>
+        <properties/>
+        <border type="none"/>
+        <children>
+          <component id="df2f8" class="javax.swing.JLabel">
+            <constraints/>
+            <properties>
+              <text value="Host URL:"/>
+            </properties>
+          </component>
+          <component id="d54f4" class="javax.swing.JTextField" binding="host">
+            <constraints/>
+            <properties/>
+          </component>
+        </children>
+      </toolbar>
+    </children>
+  </grid>
+</form>

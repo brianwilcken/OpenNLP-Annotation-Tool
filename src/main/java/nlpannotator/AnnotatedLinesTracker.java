@@ -22,20 +22,20 @@ public class AnnotatedLinesTracker extends JFrame {
     private JTable annotationsTable;
     private JButton deleteSelectedAnnotationButton;
     private JButton findMoreLikeThisButton;
-    private Main annotatorUI;
+    private Main mainUI;
 
     private DefaultTableModel tableModel;
     private DefaultTableModel annotationsTableModel;
 
     private TreeMap<Integer, String> annotatedLines;
 
-    public AnnotatedLinesTracker(Main annotatorUI) {
-        this.annotatorUI = annotatorUI;
+    public AnnotatedLinesTracker(Main mainUI) {
+        this.mainUI = mainUI;
 
         setTitle("Annotated Lines Tracker");
         setContentPane(panel1);
-        if (annotatorUI != null) {
-            setLocation(annotatorUI.getLocationOnScreen());
+        if (mainUI != null) {
+            setLocation(mainUI.getLocationOnScreen());
         }
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
         pack();
@@ -48,7 +48,7 @@ public class AnnotatedLinesTracker extends JFrame {
             public void valueChanged(ListSelectionEvent event) {
                 if (annotatedLinesTable.getSelectedRow() != -1) {
                     String text = annotatedLinesTable.getValueAt(annotatedLinesTable.getSelectedRow(), 1).toString();
-                    annotatorUI.navigateToLine(text);
+                    mainUI.navigateToLine(text);
                 }
             }
         });
@@ -73,7 +73,7 @@ public class AnnotatedLinesTracker extends JFrame {
         onlyShowSelectedAnnotationsCheckBox.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
-                annotatorUI.updateAnnotatedLinesList();
+                mainUI.updateAnnotatedLinesList();
             }
         });
 
@@ -97,7 +97,7 @@ public class AnnotatedLinesTracker extends JFrame {
             int row = annotationsTable.getSelectedRow();
             String annotation = annotationsTable.getValueAt(row, 0).toString();
             String type = annotationsTable.getValueAt(row, 1).toString();
-            annotatorUI.deleteAnnotation(annotation, type);
+            mainUI.deleteAnnotation(annotation, type);
         } else {
             JOptionPane.showMessageDialog(this, "Select an annotation...");
         }
@@ -107,7 +107,7 @@ public class AnnotatedLinesTracker extends JFrame {
         if (annotationsTable.getSelectedRow() != -1) {
             int row = annotationsTable.getSelectedRow();
             String annotation = annotationsTable.getValueAt(row, 0).toString();
-            annotatorUI.findMoreLikeThisAnnotation(annotation);
+            mainUI.findMoreLikeThisAnnotation(annotation);
         } else {
             JOptionPane.showMessageDialog(this, "Select an annotation...");
         }
