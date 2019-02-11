@@ -17,7 +17,7 @@
           <minorTickSpacing value="5"/>
           <paintLabels value="true"/>
           <paintTicks value="true"/>
-          <snapToTicks value="true"/>
+          <snapToTicks value="false"/>
         </properties>
       </component>
       <component id="a45ee" class="javax.swing.JButton" binding="autoDetectNERButton" default-binding="true">

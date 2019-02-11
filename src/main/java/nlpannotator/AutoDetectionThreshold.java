@@ -64,7 +64,7 @@ public class AutoDetectionThreshold extends JFrame {
         slider1.setMinorTickSpacing(5);
         slider1.setPaintLabels(true);
         slider1.setPaintTicks(true);
-        slider1.setSnapToTicks(true);
+        slider1.setSnapToTicks(false);
         sliderPanel.add(slider1, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         autoDetectNERButton = new JButton();
         autoDetectNERButton.setText("Auto Detect NER");
