@@ -1071,13 +1071,18 @@ public class Main extends JFrame {
         Pattern duplicateTags = Pattern.compile("<START:[\\w]*?>(?=(?:(?!<END>).)*<START:[\\w]*?>)", Pattern.MULTILINE);
         boolean isValid = true;
 
-        String text = playground.getText();
-        Matcher duplicateMatcher = duplicateTags.matcher(text);
-        while (duplicateMatcher.find()) {
-            String duplicateTag = text.substring(duplicateMatcher.start(), duplicateMatcher.end());
-            int len = duplicateTag.length();
-            applyTextStyle(duplicateMatcher.start() - 1, len, true, Color.RED, Color.black);
-            isValid = false;
+        try {
+            Document doc = playground.getDocument();
+            String text = playground.getText(0, doc.getLength());
+            Matcher duplicateMatcher = duplicateTags.matcher(text);
+            while (duplicateMatcher.find()) {
+                String duplicateTag = text.substring(duplicateMatcher.start(), duplicateMatcher.end());
+                int len = duplicateTag.length();
+                applyTextStyle(duplicateMatcher.start(), len, true, Color.RED, Color.black);
+                isValid = false;
+            }
+        } catch (BadLocationException e) {
+            e.printStackTrace();
         }
 
         if (isValid) {
@@ -1092,7 +1097,11 @@ public class Main extends JFrame {
     }
 
     private void saveActionPerformed(ActionEvent evt, boolean doNLP) {
-        if (document != null && validateForSave()) {
+        if (document == null) {
+            JOptionPane.showMessageDialog(this, "Please load a document...");
+            return;
+        }
+        if (validateForSave()) {
             ProcessMonitor procMon = getProcessMonitor();
             procMon.setVisible(true);
             String procId = procMon.addProcess("(" + Instant.now() + ") Processing Document: " + document.get("filename").toString());
@@ -1158,8 +1167,6 @@ public class Main extends JFrame {
                     procMon.removeProcess(procId);
                 }
             }).start();
-        } else {
-            JOptionPane.showMessageDialog(this, "Please load a document...");
         }
     }
 
