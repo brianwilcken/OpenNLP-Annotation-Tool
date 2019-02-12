@@ -1253,7 +1253,13 @@ public class Main extends JFrame {
         if (tracker.inSelectedAnnotationMode()) {
             annotationTarget = getAnnotation();
         }
-        String[] allLines = playground.getText().split(System.lineSeparator());
+        String docText = playground.getText();
+        String[] allLines;
+        if (docText.contains(System.lineSeparator())) {
+            allLines = playground.getText().split(System.lineSeparator());
+        } else {
+            allLines = playground.getText().split("\n");
+        }
 
         TreeMap<Integer, String> annotatedLines = new TreeMap<>();
         for (int i = 0; i < allLines.length; i++) {
