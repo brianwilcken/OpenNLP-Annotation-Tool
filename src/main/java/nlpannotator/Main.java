@@ -1081,6 +1081,16 @@ public class Main extends JFrame {
                 applyTextStyle(duplicateMatcher.start(), len, true, Color.RED, Color.black);
                 isValid = false;
             }
+            if (isValid) {
+                //the last few characters of the document cannot be an <END> tag or else model training fails
+                String closeTag = "<END> ";
+                int tagLength = closeTag.length();
+                if (text.endsWith(closeTag)) {
+                    int len = text.length();
+                    applyTextStyle(len - tagLength, len, true, Color.RED, Color.black);
+                    isValid = false;
+                }
+            }
         } catch (BadLocationException e) {
             e.printStackTrace();
         }
@@ -1090,7 +1100,7 @@ public class Main extends JFrame {
             highlightAnnotations();
             highlightFound();
         } else {
-            JOptionPane.showMessageDialog(this, "Please resolve all duplicate annotation tags before saving.");
+            JOptionPane.showMessageDialog(this, "Please resolve all highlighted annotation tag problems before saving.");
         }
 
         return isValid;
