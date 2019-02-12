@@ -652,26 +652,54 @@ public class Main extends JFrame {
     }
 
     private void unannotateSingle(Highlighter.Highlight[] highlights) {
-        for (Highlighter.Highlight highlight : highlights) {
-            Document doc = playground.getDocument();
-            int start = highlight.getStartOffset();
-            int end = highlight.getEndOffset();
+        Document doc = playground.getDocument();
+        String annotationType = getAnnotationType();
+        Pattern annotationPattern = Pattern.compile(" ?<START:" + annotationType + ">.+?<END> ?");
 
-            String annotationType = getAnnotationType();
-            Pattern annotationPattern = Pattern.compile(" ?<START:" + annotationType + ">.+?<END> ?");
-            try {
-                String highlighted = doc.getText(start, (end - start));
-                Matcher annotationMatcher = annotationPattern.matcher(highlighted);
-                if (annotationMatcher.find()) {
-                    highlighted = highlighted.replaceAll(" ?<START:" + annotationType + "> ", "");
-                    highlighted = highlighted.replaceAll(" <END> ?", "");
-                    doc.remove(start, (end - start));
-                    doc.insertString(start, highlighted, null);
+        if (highlights.length > 0) {
+            for (Highlighter.Highlight highlight : highlights) {
+                int start = highlight.getStartOffset();
+                int end = highlight.getEndOffset();
+
+                try {
+                    String highlighted = doc.getText(start, (end - start));
+                    Matcher annotationMatcher = annotationPattern.matcher(highlighted);
+                    if (annotationMatcher.find()) {
+                        highlighted = highlighted.replaceAll(" ?<START:" + annotationType + "> ", "");
+                        highlighted = highlighted.replaceAll(" <END> ?", "");
+                        doc.remove(start, (end - start));
+                        doc.insertString(start, highlighted, null);
+                    }
+                } catch (BadLocationException e1) {
+                    e1.printStackTrace();
                 }
-            } catch (BadLocationException e1) {
-                e1.printStackTrace();
+            }
+        } else {
+            try {
+                int caret = playground.getCaretPosition();
+                int start = Utilities.getRowStart(playground, caret);
+                int end = Utilities.getRowEnd(playground, caret);
+
+                String currentLine = doc.getText(start, (end - start));
+                Matcher annotationMatcher = annotationPattern.matcher(currentLine);
+                while (annotationMatcher.find()) {
+                    int lineStart = annotationMatcher.start();
+                    int lineEnd = annotationMatcher.end();
+                    int lineCaret = caret - start;
+                    if (lineStart < lineCaret && lineCaret < lineEnd) { //inside the target annotation
+                        String annotatedChunk = currentLine.substring(lineStart, lineEnd);
+                        String annotationRemoved = annotatedChunk.replaceAll(" ?<START:" + annotationType + "> ", "");
+                        annotationRemoved = annotationRemoved.replaceAll(" <END> ?", "");
+                        String updatedLine = currentLine.substring(0, lineStart) + annotationRemoved + currentLine.substring(lineEnd);
+                        doc.remove(start, (end - start));
+                        doc.insertString(start, updatedLine, null);
+                    }
+                }
+            } catch (BadLocationException e) {
+                e.printStackTrace();
             }
         }
+
         AnnotatedLinesTracker tracker = getAnnotatedLinesTracker();
         if (tracker.isVisible()) {
             updateAnnotatedLinesList();
@@ -679,27 +707,55 @@ public class Main extends JFrame {
     }
 
     private void unannotateMultiple(Highlighter.Highlight[] highlights) {
-        for (Highlighter.Highlight highlight : highlights) {
-            Document doc = playground.getDocument();
-            int start = highlight.getStartOffset();
-            int end = highlight.getEndOffset();
+        Document doc = playground.getDocument();
+        String annotationType = getAnnotationType();
+        Pattern annotationPattern = Pattern.compile(" ?<START:" + annotationType + ">.+?<END> ?");
 
-            String annotationType = getAnnotationType();
-            Pattern annotationPattern = Pattern.compile(" ?<START:" + annotationType + ">.+?<END> ?");
-            try {
-                int caretPos = playground.getCaretPosition();
-                String highlighted = doc.getText(start, (end - start));
-                Matcher annotationMatcher = annotationPattern.matcher(highlighted);
-                if (annotationMatcher.find()) {
-                    String unannotated = highlighted.replaceAll(" ?<START:" + annotationType + "> ", "");
-                    unannotated = unannotated.replaceAll(" <END> ?", "");
-                    String unannotatedDoc = doc.getText(0, doc.getLength()).replaceAll(highlighted, unannotated);
-                    doc.remove(0, doc.getLength());
-                    doc.insertString(0, unannotatedDoc, null);
-                    playground.setCaretPosition(caretPos);
+        if (highlights.length > 0) {
+            for (Highlighter.Highlight highlight : highlights) {
+                int start = highlight.getStartOffset();
+                int end = highlight.getEndOffset();
+
+                try {
+                    int caretPos = playground.getCaretPosition();
+                    String highlighted = doc.getText(start, (end - start));
+                    Matcher annotationMatcher = annotationPattern.matcher(highlighted);
+                    if (annotationMatcher.find()) {
+                        String unannotated = highlighted.replaceAll(" ?<START:" + annotationType + "> ", "");
+                        unannotated = unannotated.replaceAll(" <END> ?", "");
+                        String unannotatedDoc = doc.getText(0, doc.getLength()).replaceAll(highlighted, unannotated);
+                        doc.remove(0, doc.getLength());
+                        doc.insertString(0, unannotatedDoc, null);
+                        playground.setCaretPosition(caretPos);
+                    }
+                } catch (BadLocationException e1) {
+                    e1.printStackTrace();
                 }
-            } catch (BadLocationException e1) {
-                e1.printStackTrace();
+            }
+        } else {
+            try {
+                int caret = playground.getCaretPosition();
+                int start = Utilities.getRowStart(playground, caret);
+                int end = Utilities.getRowEnd(playground, caret);
+
+                String currentLine = doc.getText(start, (end - start));
+                Matcher annotationMatcher = annotationPattern.matcher(currentLine);
+                while (annotationMatcher.find()) {
+                    int lineStart = annotationMatcher.start();
+                    int lineEnd = annotationMatcher.end();
+                    int lineCaret = caret - start;
+                    if (lineStart < lineCaret && lineCaret < lineEnd) { //inside the target annotation
+                        String annotatedChunk = currentLine.substring(lineStart, lineEnd);
+                        String annotationRemoved = annotatedChunk.replaceAll(" ?<START:" + annotationType + "> ", "");
+                        annotationRemoved = annotationRemoved.replaceAll(" <END> ?", "");
+                        String unannotatedDoc = doc.getText(0, doc.getLength()).replaceAll(annotatedChunk, annotationRemoved);
+                        doc.remove(0, doc.getLength());
+                        doc.insertString(0, unannotatedDoc, null);
+                        playground.setCaretPosition(caret);
+                    }
+                }
+            } catch (BadLocationException e) {
+                e.printStackTrace();
             }
         }
         removeHighlights();
