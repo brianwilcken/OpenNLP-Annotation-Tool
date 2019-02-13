@@ -631,13 +631,32 @@ public class Main extends JFrame {
             int end = highlight.getEndOffset();
 
             if (validateAnnotation(start, end, doc)) {
-                String annotation = getAnnotation();
+                String annotationStart = getAnnotation();
+                String annotationEnd = " <END> ";
                 try {
                     int caretPos = playground.getCaretPosition();
                     String selectedText = doc.getText(start, end - start);
-                    String annotated = doc.getText(0, doc.getLength()).replaceAll(selectedText, annotation + selectedText + " <END> ");
+                    String annotatedText = annotationStart + selectedText + annotationEnd;
+                    int annotationStartLength = annotationStart.length();
+
+                    String docText = doc.getText(0, doc.getLength());
+                    int selectedIndex = docText.indexOf(selectedText, 0);
+                    while (selectedIndex != -1) {
+                        if (selectedIndex - annotationStartLength >= 0) {
+                            String possibleAnnotationStart = docText.substring(selectedIndex - annotationStartLength, selectedIndex);
+                            if (!possibleAnnotationStart.equals(annotationStart)) {
+                                docText = docText.substring(0, selectedIndex) + annotatedText + docText.substring(selectedIndex + selectedText.length());
+                                selectedIndex = docText.indexOf(selectedText, selectedIndex + annotatedText.length());
+                                continue;
+                            }
+                        } else {
+                            docText = docText.substring(0, selectedIndex) + annotatedText + docText.substring(selectedIndex + selectedText.length());
+                        }
+                        selectedIndex = docText.indexOf(selectedText, selectedIndex + 1);
+                    }
+
                     doc.remove(0, doc.getLength());
-                    doc.insertString(0, annotated, null);
+                    doc.insertString(0, docText, null);
                     playground.setCaretPosition(caretPos);
                 } catch (BadLocationException e1) {
                     e1.printStackTrace();

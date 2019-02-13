@@ -30,8 +30,12 @@ public class AnnotatedLinesTracker extends JFrame {
 
     private TreeMap<Integer, String> annotatedLines;
 
+    private AnnotationSelectionManager annotationSelectionManager;
+
     public AnnotatedLinesTracker(Main mainUI) {
         this.mainUI = mainUI;
+
+        annotationSelectionManager = new AnnotationSelectionManager();
 
         setTitle("Annotated Lines Tracker");
         setContentPane(panel1);
@@ -223,7 +227,38 @@ public class AnnotatedLinesTracker extends JFrame {
         }
     }
 
+    private class AnnotationSelectionManager {
+        private String annotation;
+        private String type;
+
+        public void saveAnnotationSelection() {
+            int row = annotationsTable.getSelectedRow();
+            if (row != -1) {
+                annotation = annotationsTable.getValueAt(row, 0).toString();
+                type = annotationsTable.getValueAt(row, 1).toString();
+            } else {
+                annotation = null;
+                type = null;
+            }
+        }
+
+        public void restoreAnnotationSelection() {
+            if (annotation != null && type != null) {
+                for (int r = 0; r < annotationsTable.getRowCount(); r++) {
+                    String lineAnnotation = annotationsTable.getValueAt(r, 0).toString();
+                    String lineType = annotationsTable.getValueAt(r, 1).toString();
+                    if (lineAnnotation.equals(annotation) && lineType.equals(type)) {
+                        annotationsTable.setRowSelectionInterval(r, r);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
     private void populateAnnotationsList(TreeMap<Integer, String> annotatedLines) {
+        annotationSelectionManager.saveAnnotationSelection();
+
         annotationsTableModel = new DefaultTableModel();
         annotationsTableModel.addColumn("Annotation");
         annotationsTableModel.addColumn("Type");
@@ -263,6 +298,8 @@ public class AnnotatedLinesTracker extends JFrame {
         list.add(new RowSorter.SortKey(0, SortOrder.ASCENDING));
         sorter.setSortKeys(list);
         sorter.sort();
+
+        annotationSelectionManager.restoreAnnotationSelection();
     }
 
 }
