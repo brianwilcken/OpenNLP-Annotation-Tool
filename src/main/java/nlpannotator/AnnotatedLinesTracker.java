@@ -8,6 +8,7 @@ import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -128,64 +129,11 @@ public class AnnotatedLinesTracker extends JFrame {
 
         annotatedLinesTable.setModel(tableModel);
         annotatedLinesTable.getColumnModel().getColumn(0).setMaxWidth(50);
+        annotatedLinesTable.getColumnModel().getColumn(1).setCellRenderer(new WordWrapCellRenderer());
         annotatedLinesTable.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
         annotatedLinesTable.setDefaultEditor(Object.class, null);
 
         populateAnnotationsList(annotatedLines);
-    }
-
-    private void populateAnnotatedLinesTableModel() {
-        for (int r = tableModel.getRowCount() - 1; r >= 0; r--) {
-            tableModel.removeRow(r);
-        }
-
-        for (Map.Entry<Integer, String> entry : annotatedLines.entrySet()) {
-            int line = entry.getKey();
-            String annotation = entry.getValue();
-            tableModel.addRow(new Object[]{line, annotation});
-        }
-    }
-
-    private void populateAnnotationsList(TreeMap<Integer, String> annotatedLines) {
-        annotationsTableModel = new DefaultTableModel();
-        annotationsTableModel.addColumn("Annotation");
-        annotationsTableModel.addColumn("Type");
-
-        Pattern annotationExtractor = Pattern.compile("(?<=<START:).+?(?= <END>)");
-        Pattern entityExtractor = Pattern.compile("(?<=> ).+");
-        Pattern typeExtractor = Pattern.compile(".+(?=>)");
-
-        Set<String> annotations = new TreeSet<>();
-        for (Map.Entry<Integer, String> entry : annotatedLines.entrySet()) {
-            String annotation = entry.getValue();
-            Matcher matcher = annotationExtractor.matcher(annotation);
-
-            while (matcher.find()) {
-                String annotatedText = annotation.substring(matcher.start(), matcher.end());
-                Matcher entityMatcher = entityExtractor.matcher(annotatedText);
-                Matcher typeMatcher = typeExtractor.matcher(annotatedText);
-                if (entityMatcher.find() && typeMatcher.find()) {
-                    String entity = annotatedText.substring(entityMatcher.start(), entityMatcher.end());
-                    String type = annotatedText.substring(typeMatcher.start(), typeMatcher.end());
-                    String element = entity + "\t [" + type + "]";
-                    if (!annotations.contains(element)) {
-                        annotations.add(element);
-                        annotationsTableModel.addRow(new Object[]{entity, type});
-                    }
-                }
-            }
-        }
-
-        annotationsTable.setModel(annotationsTableModel);
-        annotationsTable.setAutoCreateRowSorter(true);
-        annotationsTable.setDefaultEditor(Object.class, null);
-
-        //sort by the Annotation column
-        DefaultRowSorter sorter = ((DefaultRowSorter) annotationsTable.getRowSorter());
-        ArrayList list = new ArrayList();
-        list.add(new RowSorter.SortKey(0, SortOrder.ASCENDING));
-        sorter.setSortKeys(list);
-        sorter.sort();
     }
 
     {
@@ -246,4 +194,75 @@ public class AnnotatedLinesTracker extends JFrame {
     public JComponent $$$getRootComponent$$$() {
         return panel1;
     }
+
+    private static class WordWrapCellRenderer extends JTextArea implements TableCellRenderer {
+        public WordWrapCellRenderer() {
+            setLineWrap(true);
+            setWrapStyleWord(true);
+        }
+
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            setText(value.toString());
+            setSize(table.getColumnModel().getColumn(column).getWidth(), getPreferredSize().height);
+            if (table.getRowHeight(row) != getPreferredSize().height) {
+                table.setRowHeight(row, getPreferredSize().height);
+            }
+            return this;
+        }
+    }
+
+    private void populateAnnotatedLinesTableModel() {
+        for (int r = tableModel.getRowCount() - 1; r >= 0; r--) {
+            tableModel.removeRow(r);
+        }
+
+        for (Map.Entry<Integer, String> entry : annotatedLines.entrySet()) {
+            int line = entry.getKey();
+            String annotation = entry.getValue();
+            tableModel.addRow(new Object[]{line, annotation});
+        }
+    }
+
+    private void populateAnnotationsList(TreeMap<Integer, String> annotatedLines) {
+        annotationsTableModel = new DefaultTableModel();
+        annotationsTableModel.addColumn("Annotation");
+        annotationsTableModel.addColumn("Type");
+
+        Pattern annotationExtractor = Pattern.compile("(?<=<START:).+?(?= <END>)");
+        Pattern entityExtractor = Pattern.compile("(?<=> ).+");
+        Pattern typeExtractor = Pattern.compile(".+(?=>)");
+
+        Set<String> annotations = new TreeSet<>();
+        for (Map.Entry<Integer, String> entry : annotatedLines.entrySet()) {
+            String annotation = entry.getValue();
+            Matcher matcher = annotationExtractor.matcher(annotation);
+
+            while (matcher.find()) {
+                String annotatedText = annotation.substring(matcher.start(), matcher.end());
+                Matcher entityMatcher = entityExtractor.matcher(annotatedText);
+                Matcher typeMatcher = typeExtractor.matcher(annotatedText);
+                if (entityMatcher.find() && typeMatcher.find()) {
+                    String entity = annotatedText.substring(entityMatcher.start(), entityMatcher.end());
+                    String type = annotatedText.substring(typeMatcher.start(), typeMatcher.end());
+                    String element = entity + "\t [" + type + "]";
+                    if (!annotations.contains(element)) {
+                        annotations.add(element);
+                        annotationsTableModel.addRow(new Object[]{entity, type});
+                    }
+                }
+            }
+        }
+
+        annotationsTable.setModel(annotationsTableModel);
+        annotationsTable.setAutoCreateRowSorter(true);
+        annotationsTable.setDefaultEditor(Object.class, null);
+
+        //sort by the Annotation column
+        DefaultRowSorter sorter = ((DefaultRowSorter) annotationsTable.getRowSorter());
+        ArrayList list = new ArrayList();
+        list.add(new RowSorter.SortKey(0, SortOrder.ASCENDING));
+        sorter.setSortKeys(list);
+        sorter.sort();
+    }
+
 }
