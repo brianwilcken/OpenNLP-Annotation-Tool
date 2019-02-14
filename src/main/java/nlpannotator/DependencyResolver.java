@@ -143,7 +143,7 @@ public class DependencyResolver extends JFrame {
                     new ParameterizedTypeReference<HashMap<String, Object>>() {
                     };
 
-            RequestEntity<Void> request = RequestEntity.get(new URI(mainUI.getHostURL() + "/documents/dependencies/" + docId))
+            RequestEntity<Void> request = RequestEntity.get(new URI(mainUI.getHostURL() + "/documents/dependencies/" + docId + "?relationId="))
                     .accept(MediaType.APPLICATION_JSON).build();
 
             ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
@@ -341,6 +341,31 @@ public class DependencyResolver extends JFrame {
         ddlDependenciesSelectionChanged(null);
     }
 
+    private void getPossibleMatchingFacilities() {
+        try {
+            String relationId = selectedDependency.get("relationId").toString();
+
+            ParameterizedTypeReference<HashMap<String, Object>> responseType =
+                    new ParameterizedTypeReference<HashMap<String, Object>>() {
+                    };
+
+            RequestEntity<Void> request = RequestEntity.get(new URI(mainUI.getHostURL() + "/documents/dependencies/" + docId + "?relationId=" + relationId))
+                    .accept(MediaType.APPLICATION_JSON).build();
+
+            ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
+
+            Map<String, Object> jsonDict = response.getBody();
+
+            List<Map<String, Object>> dependencyForRelation = ((List<Map<String, Object>>) jsonDict.get("data"));
+
+            if (dependencyForRelation.size() > 0) {
+                selectedDependency = dependencyForRelation.get(0);
+            }
+        } catch (URISyntaxException e) {
+            JOptionPane.showMessageDialog(mainUI, e.getMessage());
+        }
+    }
+
     private void ddlDependenciesSelectionChanged(ActionEvent actionEvent) {
         ddlAssets.setSelectedIndex(0);
         selectedDependency = null;
@@ -350,6 +375,8 @@ public class DependencyResolver extends JFrame {
         reverseButton.setVisible(false);
         if (depIndex >= 0) {
             selectedDependency = dependencies.get(depIndex);
+            getPossibleMatchingFacilities();
+
             Map<String, Object> providingFacility = (Map<String, Object>) selectedDependency.get("providingFacility");
             Map<String, Object> dependentFacility = (Map<String, Object>) selectedDependency.get("dependentFacility");
 
