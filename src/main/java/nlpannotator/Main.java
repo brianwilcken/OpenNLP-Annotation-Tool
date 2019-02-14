@@ -74,6 +74,7 @@ public class Main extends JFrame {
     private JToolBar midbar;
     private JToolBar lowbar;
     private JToolBar botbar;
+    private JScrollPane playgroundScrollPane;
 
     private RestTemplate restTemplate;
     private ProcessMonitor processMonitor;
@@ -124,6 +125,8 @@ public class Main extends JFrame {
         redoStates = new SizedStack<>(10);
         host.setText(Tools.getProperty("restApi.url"));
         playground.setFont(new Font("Segoe UI Symbol", 0, 16));
+        TextLineNumber tln = new TextLineNumber(playground);
+        playgroundScrollPane.setRowHeaderView(tln);
         topbar.setFloatable(false);
         midbar.setFloatable(false);
         lowbar.setFloatable(false);
@@ -251,11 +254,11 @@ public class Main extends JFrame {
         showProcessMonitorButton = new JButton();
         showProcessMonitorButton.setText("Show Process Monitor");
         topbar.add(showProcessMonitorButton);
-        final JScrollPane scrollPane1 = new JScrollPane();
-        mainPanel.add(scrollPane1, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(1200, -1), null, 0, false));
+        playgroundScrollPane = new JScrollPane();
+        mainPanel.add(playgroundScrollPane, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(1200, -1), null, 0, false));
         playground = new JTextPane();
         playground.setEditable(false);
-        scrollPane1.setViewportView(playground);
+        playgroundScrollPane.setViewportView(playground);
         final JPanel panel1 = new JPanel();
         panel1.setLayout(new GridLayoutManager(5, 1, new Insets(0, 0, 0, 0), -1, -1));
         mainPanel.add(panel1, new GridConstraints(0, 1, 4, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
@@ -267,14 +270,14 @@ public class Main extends JFrame {
         panel1.add(label2, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(405, 16), null, 0, false));
         final Spacer spacer1 = new Spacer();
         panel1.add(spacer1, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(405, 14), null, 0, false));
-        final JScrollPane scrollPane2 = new JScrollPane();
-        panel1.add(scrollPane2, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(405, 128), null, 0, false));
+        final JScrollPane scrollPane1 = new JScrollPane();
+        panel1.add(scrollPane1, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(405, 128), null, 0, false));
         doccat = new JList();
-        scrollPane2.setViewportView(doccat);
-        final JScrollPane scrollPane3 = new JScrollPane();
-        panel1.add(scrollPane3, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(405, 360), null, 0, false));
+        scrollPane1.setViewportView(doccat);
+        final JScrollPane scrollPane2 = new JScrollPane();
+        panel1.add(scrollPane2, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(405, 360), null, 0, false));
         typeTree = new JTree();
-        scrollPane3.setViewportView(typeTree);
+        scrollPane2.setViewportView(typeTree);
         midbar = new JToolBar();
         mainPanel.add(midbar, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(-1, 20), null, 0, false));
         runNLPPipelineButton = new JButton();

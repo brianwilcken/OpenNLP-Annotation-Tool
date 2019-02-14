@@ -221,7 +221,7 @@ public class AnnotatedLinesTracker extends JFrame {
         }
 
         for (Map.Entry<Integer, String> entry : annotatedLines.entrySet()) {
-            int line = entry.getKey();
+            int line = entry.getKey() + 1;
             String annotation = entry.getValue();
             tableModel.addRow(new Object[]{line, annotation});
         }
