@@ -3,7 +3,6 @@ package nlpannotator;
 import com.google.common.base.Strings;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
-import com.intellij.uiDesigner.core.Spacer;
 import common.FacilityTypes;
 import common.SizedStack;
 import common.Tools;
@@ -75,6 +74,9 @@ public class Main extends JFrame {
     private JToolBar lowbar;
     private JToolBar botbar;
     private JScrollPane playgroundScrollPane;
+    private JCheckBox includeInNERTrainingCheckBox;
+    private JCheckBox includeInNERTestingCheckBox;
+    private JButton testNERModelButton;
 
     private RestTemplate restTemplate;
     private ProcessMonitor processMonitor;
@@ -260,24 +262,28 @@ public class Main extends JFrame {
         playground.setEditable(false);
         playgroundScrollPane.setViewportView(playground);
         final JPanel panel1 = new JPanel();
-        panel1.setLayout(new GridLayoutManager(5, 1, new Insets(0, 0, 0, 0), -1, -1));
+        panel1.setLayout(new GridLayoutManager(5, 2, new Insets(0, 0, 0, 0), -1, -1));
         mainPanel.add(panel1, new GridConstraints(0, 1, 4, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         final JLabel label1 = new JLabel();
         label1.setText("Annotation Tag:");
-        panel1.add(label1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(405, 16), null, 0, false));
+        panel1.add(label1, new GridConstraints(0, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(405, 16), null, 0, false));
         final JLabel label2 = new JLabel();
         label2.setText("Document Categories:");
-        panel1.add(label2, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(405, 16), null, 0, false));
-        final Spacer spacer1 = new Spacer();
-        panel1.add(spacer1, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(405, 14), null, 0, false));
+        panel1.add(label2, new GridConstraints(2, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(405, 16), null, 0, false));
         final JScrollPane scrollPane1 = new JScrollPane();
-        panel1.add(scrollPane1, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(405, 128), null, 0, false));
+        panel1.add(scrollPane1, new GridConstraints(3, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(405, 128), null, 0, false));
         doccat = new JList();
         scrollPane1.setViewportView(doccat);
         final JScrollPane scrollPane2 = new JScrollPane();
-        panel1.add(scrollPane2, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(405, 360), null, 0, false));
+        panel1.add(scrollPane2, new GridConstraints(1, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(405, 360), null, 0, false));
         typeTree = new JTree();
         scrollPane2.setViewportView(typeTree);
+        includeInNERTrainingCheckBox = new JCheckBox();
+        includeInNERTrainingCheckBox.setText("Include in NER Model Training");
+        panel1.add(includeInNERTrainingCheckBox, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        includeInNERTestingCheckBox = new JCheckBox();
+        includeInNERTestingCheckBox.setText("Include in NER Model Testing");
+        panel1.add(includeInNERTestingCheckBox, new GridConstraints(4, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         midbar = new JToolBar();
         mainPanel.add(midbar, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(-1, 20), null, 0, false));
         runNLPPipelineButton = new JButton();
@@ -293,11 +299,16 @@ public class Main extends JFrame {
         trainNERModelButton = new JButton();
         trainNERModelButton.setText("Train NER Model");
         midbar.add(trainNERModelButton);
+        testNERModelButton = new JButton();
+        testNERModelButton.setText("Test NER Model");
+        midbar.add(testNERModelButton);
+        final JToolBar.Separator toolBar$Separator8 = new JToolBar.Separator();
+        midbar.add(toolBar$Separator8);
         trainDocCatModelButton = new JButton();
         trainDocCatModelButton.setText("Train DocCat Model");
         midbar.add(trainDocCatModelButton);
-        final JToolBar.Separator toolBar$Separator8 = new JToolBar.Separator();
-        midbar.add(toolBar$Separator8);
+        final JToolBar.Separator toolBar$Separator9 = new JToolBar.Separator();
+        midbar.add(toolBar$Separator9);
         dependencyResolverButton = new JButton();
         dependencyResolverButton.setText("Dependency Resolver");
         midbar.add(dependencyResolverButton);
@@ -309,16 +320,16 @@ public class Main extends JFrame {
         annotateAllF2Button = new JButton();
         annotateAllF2Button.setText("Annotate All (F2)");
         lowbar.add(annotateAllF2Button);
-        final JToolBar.Separator toolBar$Separator9 = new JToolBar.Separator();
-        lowbar.add(toolBar$Separator9);
+        final JToolBar.Separator toolBar$Separator10 = new JToolBar.Separator();
+        lowbar.add(toolBar$Separator10);
         deleteAnnotationF3Button = new JButton();
         deleteAnnotationF3Button.setText("Delete Annotation (F3)");
         lowbar.add(deleteAnnotationF3Button);
         deleteAllAnnotationsF4Button = new JButton();
         deleteAllAnnotationsF4Button.setText("Delete All Annotations (F4)");
         lowbar.add(deleteAllAnnotationsF4Button);
-        final JToolBar.Separator toolBar$Separator10 = new JToolBar.Separator();
-        lowbar.add(toolBar$Separator10);
+        final JToolBar.Separator toolBar$Separator11 = new JToolBar.Separator();
+        lowbar.add(toolBar$Separator11);
         annotationsTrackerButton = new JButton();
         annotationsTrackerButton.setText("Annotations Tracker");
         lowbar.add(annotationsTrackerButton);
@@ -502,6 +513,13 @@ public class Main extends JFrame {
             }
         });
 
+        testNERModelButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                testNERModelActionPerformed(null);
+            }
+        });
+
         trainDocCatModelButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
@@ -569,6 +587,32 @@ public class Main extends JFrame {
                 highlightActionPerformed();
             }
         });
+
+        includeInNERTrainingCheckBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                handleNERIncludeTrainingCheckboxAction();
+            }
+        });
+
+        includeInNERTestingCheckBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                handleNERIncludeTestingCheckboxAction();
+            }
+        });
+    }
+
+    private void handleNERIncludeTrainingCheckboxAction() {
+        if (includeInNERTrainingCheckBox.isSelected()) {
+            includeInNERTestingCheckBox.setSelected(false);
+        }
+    }
+
+    private void handleNERIncludeTestingCheckboxAction() {
+        if (includeInNERTestingCheckBox.isSelected()) {
+            includeInNERTrainingCheckBox.setSelected(false);
+        }
     }
 
     private boolean validateAnnotation(int start, int end, Document doc) {
@@ -806,6 +850,53 @@ public class Main extends JFrame {
 
                     if (response.getStatusCode() != HttpStatus.OK) {
                         JOptionPane.showMessageDialog(this, "Server error has occurred!!");
+                    }
+                } catch (URISyntaxException e) {
+                    JOptionPane.showMessageDialog(this, e.getMessage());
+                } catch (ResourceAccessException e) {
+                    JOptionPane.showMessageDialog(this, e.getMessage());
+                } catch (HttpServerErrorException e) {
+                    JOptionPane.showMessageDialog(this, e.getResponseBodyAsString());
+                } finally {
+                    procMon.removeProcess(procId);
+                }
+            }).start();
+        }
+    }
+
+    private void testNERModelActionPerformed(ActionEvent evt) {
+        if (document != null) {
+            ProcessMonitor procMon = getProcessMonitor();
+            procMon.setVisible(true);
+            String procId = procMon.addProcess("(" + Instant.now() + ") Testing NER Model");
+            new Thread(() -> {
+                try {
+                    ParameterizedTypeReference<HashMap<String, Object>> responseType =
+                            new ParameterizedTypeReference<HashMap<String, Object>>() {
+                            };
+
+                    List categories = (List) document.get("category");
+                    List<String> categoryList = (List<String>) categories.stream().map(category -> "category=" + category.toString()).collect(Collectors.toList());
+                    String categoryQuery = categoryList.stream().reduce((p1, p2) -> p1 + "&" + p2).orElse("");
+                    RequestEntity<Void> request = RequestEntity.get(new URI(getHostURL() + "/documents/testNER" + "?" + categoryQuery))
+                            .accept(MediaType.APPLICATION_JSON).build();
+
+                    ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
+                    Map<String, Object> jsonDict = response.getBody();
+
+                    if (response.getStatusCode() != HttpStatus.OK) {
+                        JOptionPane.showMessageDialog(this, "Server error has occurred!!");
+                    } else {
+                        Map<String, Object> results = ((Map<String, Object>) jsonDict.get("data"));
+                        for (Object category : categories) {
+                            String result = results.get(category).toString();
+                            JTextArea resultText = new JTextArea(result);
+                            JScrollPane scrollPane = new JScrollPane();
+                            scrollPane.setViewportView(resultText);
+                            scrollPane.setPreferredSize(new Dimension(2200, 1080));
+                            resultText.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+                            JOptionPane.showMessageDialog(this, scrollPane, "Test Results for " + category + " Model", JOptionPane.INFORMATION_MESSAGE);
+                        }
                     }
                 } catch (URISyntaxException e) {
                     JOptionPane.showMessageDialog(this, e.getMessage());
@@ -1131,6 +1222,16 @@ public class Main extends JFrame {
         } else {
             playground.setText(document.get("docText").toString());
         }
+        if (document.containsKey("includeInNERTraining")) {
+            includeInNERTrainingCheckBox.setSelected(Boolean.parseBoolean(document.get("includeInNERTraining").toString()));
+        } else {
+            includeInNERTrainingCheckBox.setSelected(false);
+        }
+        if (document.containsKey("includeInNERTesting")) {
+            includeInNERTestingCheckBox.setSelected(Boolean.parseBoolean(document.get("includeInNERTesting").toString()));
+        } else {
+            includeInNERTestingCheckBox.setSelected(false);
+        }
 
         playground.setCaretPosition(0);
         this.document = document;
@@ -1212,6 +1313,20 @@ public class Main extends JFrame {
                     document.replace("annotatedBy", annotatedBy);
                 } else {
                     document.put("annotatedBy", annotatedBy);
+                }
+
+                boolean includeInNERTraining = includeInNERTrainingCheckBox.isSelected();
+                if (document.containsKey("includeInNERTraining")) {
+                    document.replace("includeInNERTraining", includeInNERTraining);
+                } else {
+                    document.put("includeInNERTraining", includeInNERTraining);
+                }
+
+                boolean includeInNERTesting = includeInNERTestingCheckBox.isSelected();
+                if (document.containsKey("includeInNERTesting")) {
+                    document.replace("includeInNERTesting", includeInNERTesting);
+                } else {
+                    document.put("includeInNERTesting", includeInNERTesting);
                 }
 
                 try {

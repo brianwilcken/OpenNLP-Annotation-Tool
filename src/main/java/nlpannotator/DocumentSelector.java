@@ -85,6 +85,7 @@ public class DocumentSelector extends JFrame {
         tableModel.addColumn("Updated By");
         tableModel.addColumn("% Annotated");
         tableModel.addColumn("Size (lines)");
+        tableModel.addColumn("Use");
 
         table1.setModel(tableModel);
 
@@ -103,6 +104,9 @@ public class DocumentSelector extends JFrame {
         table1.getColumn("Size (lines)").setMaxWidth(100);
         table1.getColumn("Size (lines)").setMinWidth(100);
         table1.getColumn("Size (lines)").setResizable(false);
+        table1.getColumn("Use").setMaxWidth(100);
+        table1.getColumn("Use").setMinWidth(100);
+        table1.getColumn("Use").setResizable(false);
         table1.setDefaultEditor(Object.class, null);
         table1.setAutoCreateRowSorter(true);
         table1.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
@@ -114,7 +118,7 @@ public class DocumentSelector extends JFrame {
                     new ParameterizedTypeReference<HashMap<String, Object>>() {
                     };
 
-            RequestEntity<Void> request = RequestEntity.get(new URI(mainUI.getHostURL() + "/documents?docText=*&fields=id&fields=filename&fields=category&fields=created&fields=lastUpdated&fields=annotatedBy&fields=percentAnnotated&fields=totalLines&fields=url&fields=project"))
+            RequestEntity<Void> request = RequestEntity.get(new URI(mainUI.getHostURL() + "/documents?docText=*&fields=id&fields=filename&fields=category&fields=created&fields=lastUpdated&fields=annotatedBy&fields=percentAnnotated&fields=totalLines&fields=url&fields=project&fields=includeInNERTraining&fields=includeInNERTesting"))
                     .accept(MediaType.APPLICATION_JSON).build();
 
             ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
@@ -159,8 +163,21 @@ public class DocumentSelector extends JFrame {
                 if (doc.containsKey("totalLines")) {
                     totalLines = doc.get("totalLines").toString();
                 }
+                String use = "";
+                if (doc.containsKey("includeInNERTraining")) {
+                    boolean useForTraining = Boolean.parseBoolean(doc.get("includeInNERTraining").toString());
+                    if (useForTraining) {
+                        use = "train";
+                    }
+                }
+                if (doc.containsKey("includeInNERTesting")) {
+                    boolean useForTesting = Boolean.parseBoolean(doc.get("includeInNERTesting").toString());
+                    if (useForTesting) {
+                        use = "test";
+                    }
+                }
 
-                tableModel.addRow(new Object[]{id, filename, url, category, project, lastUpdatedStr, annotatedBy, percentAnnotated, totalLines});
+                tableModel.addRow(new Object[]{id, filename, url, category, project, lastUpdatedStr, annotatedBy, percentAnnotated, totalLines, use});
             }
 
             scrollPane1.setPreferredSize(new Dimension(400, 200));
