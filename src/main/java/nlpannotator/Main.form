@@ -207,16 +207,6 @@
         <properties/>
         <border type="none"/>
         <children>
-          <component id="d483a" class="javax.swing.JButton" binding="runNLPPipelineButton" default-binding="true">
-            <constraints/>
-            <properties>
-              <text value="Run NLP Pipeline"/>
-            </properties>
-          </component>
-          <component id="77008" class="javax.swing.JToolBar$Separator">
-            <constraints/>
-            <properties/>
-          </component>
           <component id="b3866" class="javax.swing.JButton" binding="entityAutoDetectionButton" default-binding="true">
             <constraints/>
             <properties>

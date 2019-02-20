@@ -46,7 +46,6 @@ public class Main extends JFrame {
     private JTextPane playground;
     private JButton openButton;
     private JButton saveButton;
-    private JButton runNLPPipelineButton;
     private JButton downloadOriginalButton;
     private JList doccat;
     private JTree typeTree;
@@ -286,29 +285,24 @@ public class Main extends JFrame {
         panel1.add(includeInNERTestingCheckBox, new GridConstraints(4, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         midbar = new JToolBar();
         mainPanel.add(midbar, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(-1, 20), null, 0, false));
-        runNLPPipelineButton = new JButton();
-        runNLPPipelineButton.setText("Run NLP Pipeline");
-        midbar.add(runNLPPipelineButton);
-        final JToolBar.Separator toolBar$Separator6 = new JToolBar.Separator();
-        midbar.add(toolBar$Separator6);
         entityAutoDetectionButton = new JButton();
         entityAutoDetectionButton.setText("Entity Auto-Detection");
         midbar.add(entityAutoDetectionButton);
-        final JToolBar.Separator toolBar$Separator7 = new JToolBar.Separator();
-        midbar.add(toolBar$Separator7);
+        final JToolBar.Separator toolBar$Separator6 = new JToolBar.Separator();
+        midbar.add(toolBar$Separator6);
         trainNERModelButton = new JButton();
         trainNERModelButton.setText("Train NER Model");
         midbar.add(trainNERModelButton);
         testNERModelButton = new JButton();
         testNERModelButton.setText("Test NER Model");
         midbar.add(testNERModelButton);
-        final JToolBar.Separator toolBar$Separator8 = new JToolBar.Separator();
-        midbar.add(toolBar$Separator8);
+        final JToolBar.Separator toolBar$Separator7 = new JToolBar.Separator();
+        midbar.add(toolBar$Separator7);
         trainDocCatModelButton = new JButton();
         trainDocCatModelButton.setText("Train DocCat Model");
         midbar.add(trainDocCatModelButton);
-        final JToolBar.Separator toolBar$Separator9 = new JToolBar.Separator();
-        midbar.add(toolBar$Separator9);
+        final JToolBar.Separator toolBar$Separator8 = new JToolBar.Separator();
+        midbar.add(toolBar$Separator8);
         dependencyResolverButton = new JButton();
         dependencyResolverButton.setText("Dependency Resolver");
         midbar.add(dependencyResolverButton);
@@ -320,16 +314,16 @@ public class Main extends JFrame {
         annotateAllF2Button = new JButton();
         annotateAllF2Button.setText("Annotate All (F2)");
         lowbar.add(annotateAllF2Button);
-        final JToolBar.Separator toolBar$Separator10 = new JToolBar.Separator();
-        lowbar.add(toolBar$Separator10);
+        final JToolBar.Separator toolBar$Separator9 = new JToolBar.Separator();
+        lowbar.add(toolBar$Separator9);
         deleteAnnotationF3Button = new JButton();
         deleteAnnotationF3Button.setText("Delete Annotation (F3)");
         lowbar.add(deleteAnnotationF3Button);
         deleteAllAnnotationsF4Button = new JButton();
         deleteAllAnnotationsF4Button.setText("Delete All Annotations (F4)");
         lowbar.add(deleteAllAnnotationsF4Button);
-        final JToolBar.Separator toolBar$Separator11 = new JToolBar.Separator();
-        lowbar.add(toolBar$Separator11);
+        final JToolBar.Separator toolBar$Separator10 = new JToolBar.Separator();
+        lowbar.add(toolBar$Separator10);
         annotationsTrackerButton = new JButton();
         annotationsTrackerButton.setText("Annotations Tracker");
         lowbar.add(annotationsTrackerButton);
@@ -418,7 +412,7 @@ public class Main extends JFrame {
         saveButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
-                saveActionPerformed(actionEvent, false);
+                saveActionPerformed(actionEvent);
             }
         });
 
@@ -489,13 +483,6 @@ public class Main extends JFrame {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
                 getProcessMonitor().setVisible(true);
-            }
-        });
-
-        runNLPPipelineButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent actionEvent) {
-                saveActionPerformed(actionEvent, true);
             }
         });
 
@@ -1285,7 +1272,7 @@ public class Main extends JFrame {
         return isValid;
     }
 
-    private void saveActionPerformed(ActionEvent evt, boolean doNLP) {
+    private void saveActionPerformed(ActionEvent evt) {
         if (document == null) {
             JOptionPane.showMessageDialog(this, "Please load a document...");
             return;
@@ -1339,7 +1326,6 @@ public class Main extends JFrame {
 
                     MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
                     body.add("metadata", doc);
-                    body.add("doNLP", doNLP);
 
                     ParameterizedTypeReference<HashMap<String, Object>> responseType =
                             new ParameterizedTypeReference<HashMap<String, Object>>() {
@@ -1353,9 +1339,6 @@ public class Main extends JFrame {
                     ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
 
                     if (response.getStatusCode() == HttpStatus.OK) {
-                        if (doNLP) {
-                            JOptionPane.showMessageDialog(this, "Document Processing Complete");
-                        }
                         reloadHistory();
                         documentSelector.populate();
                     } else {
