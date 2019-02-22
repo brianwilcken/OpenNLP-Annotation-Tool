@@ -933,7 +933,7 @@ public class Main extends JFrame {
 
     }
 
-    public void autoAnnotateDocument(int threshold) {
+    public void autoAnnotateDocument(double threshold, Map<String, String> modelVersion) {
         if (document != null) {
             undoStates.empty();
             redoStates.empty();
@@ -942,7 +942,13 @@ public class Main extends JFrame {
                         new ParameterizedTypeReference<HashMap<String, Object>>() {
                         };
 
-                RequestEntity<Void> request = RequestEntity.get(new URI(getHostURL() + "/documents/annotate/" + document.get("id").toString() + "?threshold=" + threshold))
+                String modelVersionQuery = "&category=&version=";
+                if (!modelVersion.keySet().isEmpty()) {
+                    String category = modelVersion.keySet().toArray()[0].toString();
+                    String version = modelVersion.get(category);
+                    modelVersionQuery = "&category=" + category + "&version=" + version;
+                }
+                RequestEntity<Void> request = RequestEntity.get(new URI(getHostURL() + "/documents/annotate/" + document.get("id").toString() + "?threshold=" + threshold + modelVersionQuery))
                         .accept(MediaType.APPLICATION_JSON).build();
 
                 ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
@@ -969,6 +975,7 @@ public class Main extends JFrame {
             if (autoDetectionThreshold == null) {
                 autoDetectionThreshold = new AutoDetectionThreshold(this);
             }
+            autoDetectionThreshold.ddlCategorySelectionChanged(null);
             autoDetectionThreshold.setVisible(true);
         }
     }
