@@ -13,6 +13,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.*;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -29,6 +30,7 @@ public class AnnotatedLinesTracker extends JFrame {
     private DefaultTableModel annotationsTableModel;
 
     private TreeMap<Integer, String> annotatedLines;
+    private List<Map<String, Object>> autoAnnotateEntities;
 
     private AnnotationSelectionManager annotationSelectionManager;
 
@@ -138,6 +140,15 @@ public class AnnotatedLinesTracker extends JFrame {
         annotatedLinesTable.setDefaultEditor(Object.class, null);
 
         populateAnnotationsList(annotatedLines);
+    }
+
+    public void acknowledgeAutoEntities(List<Map<String, Object>> autoAnnotateEntities) {
+        this.autoAnnotateEntities = new ArrayList<>();
+        this.autoAnnotateEntities.addAll(autoAnnotateEntities);
+    }
+
+    public void forgetAutoEntities() {
+        this.autoAnnotateEntities = null;
     }
 
     {
@@ -262,6 +273,7 @@ public class AnnotatedLinesTracker extends JFrame {
         annotationsTableModel = new DefaultTableModel();
         annotationsTableModel.addColumn("Annotation");
         annotationsTableModel.addColumn("Type");
+        annotationsTableModel.addColumn("Source");
 
         Pattern annotationExtractor = Pattern.compile("(?<=<START:).+?(?= <END>)");
         Pattern entityExtractor = Pattern.compile("(?<=> ).+");
@@ -279,10 +291,11 @@ public class AnnotatedLinesTracker extends JFrame {
                 if (entityMatcher.find() && typeMatcher.find()) {
                     String entity = annotatedText.substring(entityMatcher.start(), entityMatcher.end());
                     String type = annotatedText.substring(typeMatcher.start(), typeMatcher.end());
+                    String source = getAnnotationSource(entity, type);
                     String element = entity + "\t [" + type + "]";
                     if (!annotations.contains(element)) {
                         annotations.add(element);
-                        annotationsTableModel.addRow(new Object[]{entity, type});
+                        annotationsTableModel.addRow(new Object[]{entity, type, source});
                     }
                 }
             }
@@ -300,6 +313,21 @@ public class AnnotatedLinesTracker extends JFrame {
         sorter.sort();
 
         annotationSelectionManager.restoreAnnotationSelection();
+    }
+
+    private String getAnnotationSource(String entityName, String entityType) {
+        if (autoAnnotateEntities != null) {
+            for (Map<String, Object> entity : autoAnnotateEntities) {
+                if (entity.get("entity").toString().equals(entityName) && entity.get("type").toString().equals(entityType)) {
+                    if (entity.containsKey("source")) {
+                        String source = entity.get("source").toString();
+                        return source;
+                    }
+                    break;
+                }
+            }
+        }
+        return "Annotation";
     }
 
 }

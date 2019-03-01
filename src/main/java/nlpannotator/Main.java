@@ -90,6 +90,7 @@ public class Main extends JFrame {
     private SizedStack<String> redoStates;
 
     Map document;
+    private List<Map<String, Object>> autoAnnotateEntities;
     private DefaultComboBoxModel doccatModel;
     private DefaultTreeModel typeModel;
 
@@ -955,9 +956,11 @@ public class Main extends JFrame {
 
                 Map<String, Object> jsonDict = response.getBody();
 
-                String annotated = jsonDict.get("data").toString();
+                Map<String, Object> annotated = (Map<String, Object>) jsonDict.get("data");
+                String annotatedText = annotated.keySet().toArray(new String[1])[0];
+                autoAnnotateEntities = (List<Map<String, Object>>) annotated.get(annotatedText);
 
-                playground.setText(annotated);
+                playground.setText(annotatedText);
                 playground.setCaretPosition(0);
                 highlightAnnotations();
             } catch (URISyntaxException e) {
@@ -1229,6 +1232,8 @@ public class Main extends JFrame {
 
         playground.setCaretPosition(0);
         this.document = document;
+        AnnotatedLinesTracker tracker = getAnnotatedLinesTracker();
+        tracker.forgetAutoEntities();
         removeHighlights();
         highlightAnnotations();
 
@@ -1451,6 +1456,10 @@ public class Main extends JFrame {
             }
         }
 
+        if (autoAnnotateEntities != null) {
+            tracker.acknowledgeAutoEntities(autoAnnotateEntities);
+            autoAnnotateEntities = null;
+        }
         tracker.update(annotatedLines);
         tracker.setVisible(true);
     }
