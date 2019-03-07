@@ -318,7 +318,9 @@ public class AnnotatedLinesTracker extends JFrame {
     private String getAnnotationSource(String entityName, String entityType) {
         if (autoAnnotateEntities != null) {
             for (Map<String, Object> entity : autoAnnotateEntities) {
-                if (entity.get("entity").toString().equals(entityName) && entity.get("type").toString().equals(entityType)) {
+                Map<String, Object> span = (Map<String, Object>) entity.get("span");
+                String type = span.get("type").toString();
+                if (entity.get("entity").toString().equals(entityName) && type.equals(entityType)) {
                     if (entity.containsKey("source")) {
                         String source = entity.get("source").toString();
                         return source;
