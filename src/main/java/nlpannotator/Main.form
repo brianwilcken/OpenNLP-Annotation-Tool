@@ -217,6 +217,12 @@
             <constraints/>
             <properties/>
           </component>
+          <component id="919f1" class="javax.swing.JButton" binding="trainW2VModelButton" default-binding="true">
+            <constraints/>
+            <properties>
+              <text value="Train W2V Model"/>
+            </properties>
+          </component>
           <component id="6a804" class="javax.swing.JButton" binding="trainNERModelButton" default-binding="true">
             <constraints/>
             <properties>

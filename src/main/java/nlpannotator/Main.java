@@ -76,6 +76,7 @@ public class Main extends JFrame {
     private JCheckBox includeInNERTrainingCheckBox;
     private JCheckBox includeInNERTestingCheckBox;
     private JButton testNERModelButton;
+    private JButton trainW2VModelButton;
 
     private RestTemplate restTemplate;
     private ProcessMonitor processMonitor;
@@ -291,6 +292,9 @@ public class Main extends JFrame {
         midbar.add(entityAutoDetectionButton);
         final JToolBar.Separator toolBar$Separator6 = new JToolBar.Separator();
         midbar.add(toolBar$Separator6);
+        trainW2VModelButton = new JButton();
+        trainW2VModelButton.setText("Train W2V Model");
+        midbar.add(trainW2VModelButton);
         trainNERModelButton = new JButton();
         trainNERModelButton.setText("Train NER Model");
         midbar.add(trainNERModelButton);
@@ -491,6 +495,13 @@ public class Main extends JFrame {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
                 showAutoDetectionThreshold();
+            }
+        });
+
+        trainW2VModelButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                trainW2VModelActionPerformed(null);
             }
         });
 
@@ -832,6 +843,41 @@ public class Main extends JFrame {
                     List<String> categoryList = (List<String>) categories.stream().map(category -> "category=" + category.toString()).collect(Collectors.toList());
                     String categoryQuery = categoryList.stream().reduce((p1, p2) -> p1 + "&" + p2).orElse("");
                     RequestEntity<Void> request = RequestEntity.get(new URI(getHostURL() + "/documents/trainNER" + "?" + categoryQuery + "&doAsync=false"))
+                            .accept(MediaType.APPLICATION_JSON).build();
+
+                    ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
+
+                    if (response.getStatusCode() != HttpStatus.OK) {
+                        JOptionPane.showMessageDialog(this, "Server error has occurred!!");
+                    }
+                } catch (URISyntaxException e) {
+                    JOptionPane.showMessageDialog(this, e.getMessage());
+                } catch (ResourceAccessException e) {
+                    JOptionPane.showMessageDialog(this, e.getMessage());
+                } catch (HttpServerErrorException e) {
+                    JOptionPane.showMessageDialog(this, e.getResponseBodyAsString());
+                } finally {
+                    procMon.removeProcess(procId);
+                }
+            }).start();
+        }
+    }
+
+    private void trainW2VModelActionPerformed(ActionEvent evt) {
+        if (document != null) {
+            ProcessMonitor procMon = getProcessMonitor();
+            procMon.setVisible(true);
+            String procId = procMon.addProcess("(" + Instant.now() + ") Training W2V Model");
+            new Thread(() -> {
+                try {
+                    ParameterizedTypeReference<HashMap<String, Object>> responseType =
+                            new ParameterizedTypeReference<HashMap<String, Object>>() {
+                            };
+
+                    List categories = (List) document.get("category");
+                    List<String> categoryList = (List<String>) categories.stream().map(category -> "category=" + category.toString()).collect(Collectors.toList());
+                    String categoryQuery = categoryList.stream().reduce((p1, p2) -> p1 + "&" + p2).orElse("");
+                    RequestEntity<Void> request = RequestEntity.get(new URI(getHostURL() + "/documents/trainWordToVec" + "?" + categoryQuery + "&doAsync=false"))
                             .accept(MediaType.APPLICATION_JSON).build();
 
                     ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
