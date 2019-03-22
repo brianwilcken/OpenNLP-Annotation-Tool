@@ -217,6 +217,16 @@
             <constraints/>
             <properties/>
           </component>
+          <component id="9d3e4" class="javax.swing.JButton" binding="viewNERCorpusButton" default-binding="true">
+            <constraints/>
+            <properties>
+              <text value="View NER Corpus"/>
+            </properties>
+          </component>
+          <component id="ca9c6" class="javax.swing.JToolBar$Separator">
+            <constraints/>
+            <properties/>
+          </component>
           <component id="919f1" class="javax.swing.JButton" binding="trainW2VModelButton" default-binding="true">
             <constraints/>
             <properties>

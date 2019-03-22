@@ -77,6 +77,7 @@ public class Main extends JFrame {
     private JCheckBox includeInNERTestingCheckBox;
     private JButton testNERModelButton;
     private JButton trainW2VModelButton;
+    private JButton viewNERCorpusButton;
 
     private RestTemplate restTemplate;
     private ProcessMonitor processMonitor;
@@ -292,6 +293,11 @@ public class Main extends JFrame {
         midbar.add(entityAutoDetectionButton);
         final JToolBar.Separator toolBar$Separator6 = new JToolBar.Separator();
         midbar.add(toolBar$Separator6);
+        viewNERCorpusButton = new JButton();
+        viewNERCorpusButton.setText("View NER Corpus");
+        midbar.add(viewNERCorpusButton);
+        final JToolBar.Separator toolBar$Separator7 = new JToolBar.Separator();
+        midbar.add(toolBar$Separator7);
         trainW2VModelButton = new JButton();
         trainW2VModelButton.setText("Train W2V Model");
         midbar.add(trainW2VModelButton);
@@ -301,13 +307,13 @@ public class Main extends JFrame {
         testNERModelButton = new JButton();
         testNERModelButton.setText("Test NER Model");
         midbar.add(testNERModelButton);
-        final JToolBar.Separator toolBar$Separator7 = new JToolBar.Separator();
-        midbar.add(toolBar$Separator7);
+        final JToolBar.Separator toolBar$Separator8 = new JToolBar.Separator();
+        midbar.add(toolBar$Separator8);
         trainDocCatModelButton = new JButton();
         trainDocCatModelButton.setText("Train DocCat Model");
         midbar.add(trainDocCatModelButton);
-        final JToolBar.Separator toolBar$Separator8 = new JToolBar.Separator();
-        midbar.add(toolBar$Separator8);
+        final JToolBar.Separator toolBar$Separator9 = new JToolBar.Separator();
+        midbar.add(toolBar$Separator9);
         dependencyResolverButton = new JButton();
         dependencyResolverButton.setText("Dependency Resolver");
         midbar.add(dependencyResolverButton);
@@ -319,16 +325,16 @@ public class Main extends JFrame {
         annotateAllF2Button = new JButton();
         annotateAllF2Button.setText("Annotate All (F2)");
         lowbar.add(annotateAllF2Button);
-        final JToolBar.Separator toolBar$Separator9 = new JToolBar.Separator();
-        lowbar.add(toolBar$Separator9);
+        final JToolBar.Separator toolBar$Separator10 = new JToolBar.Separator();
+        lowbar.add(toolBar$Separator10);
         deleteAnnotationF3Button = new JButton();
         deleteAnnotationF3Button.setText("Delete Annotation (F3)");
         lowbar.add(deleteAnnotationF3Button);
         deleteAllAnnotationsF4Button = new JButton();
         deleteAllAnnotationsF4Button.setText("Delete All Annotations (F4)");
         lowbar.add(deleteAllAnnotationsF4Button);
-        final JToolBar.Separator toolBar$Separator10 = new JToolBar.Separator();
-        lowbar.add(toolBar$Separator10);
+        final JToolBar.Separator toolBar$Separator11 = new JToolBar.Separator();
+        lowbar.add(toolBar$Separator11);
         annotationsTrackerButton = new JButton();
         annotationsTrackerButton.setText("Annotations Tracker");
         lowbar.add(annotationsTrackerButton);
@@ -495,6 +501,13 @@ public class Main extends JFrame {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
                 showAutoDetectionThreshold();
+            }
+        });
+
+        viewNERCorpusButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                viewNERCorpus();
             }
         });
 
@@ -826,6 +839,41 @@ public class Main extends JFrame {
         removeHighlights();
         highlightAnnotations();
         highlightFound();
+    }
+
+    private void viewNERCorpus() {
+        try {
+            ParameterizedTypeReference<HashMap<String, Object>> responseType =
+                    new ParameterizedTypeReference<HashMap<String, Object>>() {
+                    };
+
+            List categories = doccat.getSelectedValuesList();
+            List<String> categoryList = (List<String>) categories.stream().map(category -> "category=" + category.toString()).collect(Collectors.toList());
+            String categoryQuery = categoryList.stream().reduce((p1, p2) -> p1 + "&" + p2).orElse("");
+            RequestEntity<Void> request = RequestEntity.get(new URI(getHostURL() + "/documents/reviewNERCorpus" + "?" + categoryQuery))
+                    .accept(MediaType.APPLICATION_JSON).build();
+
+            ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
+
+            if (response.getStatusCode() != HttpStatus.OK) {
+                JOptionPane.showMessageDialog(this, "Server error has occurred!!");
+            } else {
+                String corpus = response.getBody().get("data").toString();
+
+                document = new HashMap();
+                document.put("category", categories);
+                document.put("filename", "NER Training Corpus");
+                document.put("annotated", corpus);
+
+                loadDocument(document);
+            }
+        } catch (URISyntaxException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage());
+        } catch (ResourceAccessException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage());
+        } catch (HttpServerErrorException e) {
+            JOptionPane.showMessageDialog(this, e.getResponseBodyAsString());
+        }
     }
 
     private void trainNERModelActionPerformed(ActionEvent evt) {
