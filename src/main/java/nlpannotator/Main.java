@@ -393,6 +393,8 @@ public class Main extends JFrame {
                     resetDocument();
                 } else if ((e.getKeyCode() == KeyEvent.VK_N) && ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0)) {
                     showAutoDetectionThreshold();
+                } else if ((e.getKeyCode() == KeyEvent.VK_S) && ((e.getModifiers() & KeyEvent.CTRL_MASK) != 0)) {
+                    saveActionPerformed(null);
                 } else if (e.getKeyCode() == KeyEvent.VK_F3) {
                     Highlighter.Highlight[] highlights = playground.getHighlighter().getHighlights();
                     undoStates.push(playground.getText());
