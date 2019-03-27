@@ -167,7 +167,7 @@ public class AnnotatedLinesTracker extends JFrame {
      */
     private void $$$setupUI$$$() {
         panel1 = new JPanel();
-        panel1.setLayout(new GridLayoutManager(2, 2, new Insets(5, 5, 5, 5), -1, -1));
+        panel1.setLayout(new GridLayoutManager(3, 1, new Insets(5, 5, 5, 5), -1, -1));
         final JPanel panel2 = new JPanel();
         panel2.setLayout(new GridLayoutManager(2, 3, new Insets(0, 0, 0, 0), -1, -1));
         panel1.add(panel2, new GridConstraints(0, 0, 2, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
@@ -185,7 +185,7 @@ public class AnnotatedLinesTracker extends JFrame {
         panel2.add(onlyShowSelectedAnnotationsCheckBox, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JPanel panel3 = new JPanel();
         panel3.setLayout(new GridLayoutManager(2, 4, new Insets(0, 0, 0, 0), -1, -1));
-        panel1.add(panel3, new GridConstraints(0, 1, 2, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, 1, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        panel1.add(panel3, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, 1, 1, new Dimension(800, 400), new Dimension(-1, 400), new Dimension(-1, 400), 0, false));
         final JLabel label2 = new JLabel();
         label2.setText("Annotations:");
         panel3.add(label2, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -193,7 +193,7 @@ public class AnnotatedLinesTracker extends JFrame {
         findMoreLikeThisButton.setText("Find More Like This");
         panel3.add(findMoreLikeThisButton, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JScrollPane scrollPane2 = new JScrollPane();
-        panel3.add(scrollPane2, new GridConstraints(1, 0, 1, 4, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_VERTICAL, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        panel3.add(scrollPane2, new GridConstraints(1, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         annotationsTable = new JTable();
         scrollPane2.setViewportView(annotationsTable);
         deleteSelectedAnnotationButton = new JButton();
@@ -274,6 +274,7 @@ public class AnnotatedLinesTracker extends JFrame {
         annotationsTableModel.addColumn("Annotation");
         annotationsTableModel.addColumn("Type");
         annotationsTableModel.addColumn("Source");
+        annotationsTableModel.addColumn("Probability");
 
         Pattern annotationExtractor = Pattern.compile("(?<=<START:).+?(?= <END>)");
         Pattern entityExtractor = Pattern.compile("(?<=> ).+");
@@ -291,11 +292,13 @@ public class AnnotatedLinesTracker extends JFrame {
                 if (entityMatcher.find() && typeMatcher.find()) {
                     String entity = annotatedText.substring(entityMatcher.start(), entityMatcher.end());
                     String type = annotatedText.substring(typeMatcher.start(), typeMatcher.end());
-                    String source = getAnnotationSource(entity, type);
+                    Map<String, String> sourceProb = getAnnotationSource(entity, type);
+                    String source = sourceProb.get("Source");
+                    String prob = sourceProb.get("Prob");
                     String element = entity + "\t [" + type + "]";
                     if (!annotations.contains(element)) {
                         annotations.add(element);
-                        annotationsTableModel.addRow(new Object[]{entity, type, source});
+                        annotationsTableModel.addRow(new Object[]{entity, type, source, prob});
                     }
                 }
             }
@@ -304,6 +307,10 @@ public class AnnotatedLinesTracker extends JFrame {
         annotationsTable.setModel(annotationsTableModel);
         annotationsTable.setAutoCreateRowSorter(true);
         annotationsTable.setDefaultEditor(Object.class, null);
+
+        annotationsTable.getColumn("Probability").setMaxWidth(150);
+        annotationsTable.getColumn("Probability").setMinWidth(150);
+        annotationsTable.getColumn("Probability").setResizable(false);
 
         //sort by the Annotation column
         DefaultRowSorter sorter = ((DefaultRowSorter) annotationsTable.getRowSorter());
@@ -315,7 +322,8 @@ public class AnnotatedLinesTracker extends JFrame {
         annotationSelectionManager.restoreAnnotationSelection();
     }
 
-    private String getAnnotationSource(String entityName, String entityType) {
+    private Map<String, String> getAnnotationSource(String entityName, String entityType) {
+        Map<String, String> sourceProb = new HashMap<>();
         if (autoAnnotateEntities != null) {
             for (Map<String, Object> entity : autoAnnotateEntities) {
                 Map<String, Object> span = (Map<String, Object>) entity.get("span");
@@ -323,13 +331,18 @@ public class AnnotatedLinesTracker extends JFrame {
                 if (entity.get("entity").toString().equals(entityName) && type.equals(entityType)) {
                     if (entity.containsKey("source")) {
                         String source = entity.get("source").toString();
-                        return source;
+                        double prob = (double) span.get("prob");
+                        sourceProb.put("Source", source);
+                        sourceProb.put("Prob", Double.toString(prob));
+                        return sourceProb;
                     }
                     break;
                 }
             }
         }
-        return "Annotation";
+        sourceProb.put("Source", "Annotation");
+        sourceProb.put("Prob", Double.toString(1.0));
+        return sourceProb;
     }
 
 }
