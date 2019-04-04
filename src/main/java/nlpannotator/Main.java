@@ -734,7 +734,7 @@ public class Main extends JFrame {
     private void unannotateSingle(Highlighter.Highlight[] highlights) {
         Document doc = playground.getDocument();
         String annotationType = getAnnotationType();
-        Pattern annotationPattern = Pattern.compile(" ?<START:" + annotationType + ">.+?<END> ?");
+        Pattern annotationPattern = Pattern.compile(" ?<START:" + Pattern.quote(annotationType) + ">.+?<END> ?");
 
         if (highlights.length > 0) {
             for (Highlighter.Highlight highlight : highlights) {
@@ -745,7 +745,7 @@ public class Main extends JFrame {
                     String highlighted = doc.getText(start, (end - start));
                     Matcher annotationMatcher = annotationPattern.matcher(highlighted);
                     if (annotationMatcher.find()) {
-                        highlighted = highlighted.replaceAll(" ?<START:" + annotationType + "> ", "");
+                        highlighted = highlighted.replaceAll(" ?<START:" + Pattern.quote(annotationType) + "> ", "");
                         highlighted = highlighted.replaceAll(" <END> ?", "");
                         doc.remove(start, (end - start));
                         doc.insertString(start, highlighted, null);
@@ -768,7 +768,7 @@ public class Main extends JFrame {
                     int lineCaret = caret - start;
                     if (lineStart < lineCaret && lineCaret < lineEnd) { //inside the target annotation
                         String annotatedChunk = currentLine.substring(lineStart, lineEnd);
-                        String annotationRemoved = annotatedChunk.replaceAll(" ?<START:" + annotationType + "> ", "");
+                        String annotationRemoved = annotatedChunk.replaceAll(" ?<START:" + Pattern.quote(annotationType) + "> ", "");
                         annotationRemoved = annotationRemoved.replaceAll(" <END> ?", "");
                         String updatedLine = currentLine.substring(0, lineStart) + annotationRemoved + currentLine.substring(lineEnd);
                         doc.remove(start, (end - start));
@@ -789,7 +789,7 @@ public class Main extends JFrame {
     private void unannotateMultiple(Highlighter.Highlight[] highlights) {
         Document doc = playground.getDocument();
         String annotationType = getAnnotationType();
-        Pattern annotationPattern = Pattern.compile(" ?<START:" + annotationType + ">.+?<END> ?");
+        Pattern annotationPattern = Pattern.compile(" ?<START:" + Pattern.quote(annotationType) + ">.+?<END> ?");
 
         if (highlights.length > 0) {
             for (Highlighter.Highlight highlight : highlights) {
@@ -801,7 +801,7 @@ public class Main extends JFrame {
                     String highlighted = doc.getText(start, (end - start));
                     Matcher annotationMatcher = annotationPattern.matcher(highlighted);
                     if (annotationMatcher.find()) {
-                        String unannotated = highlighted.replaceAll(" ?<START:" + annotationType + "> ", "");
+                        String unannotated = highlighted.replaceAll(" ?<START:" + Pattern.quote(annotationType) + "> ", "");
                         unannotated = unannotated.replaceAll(" <END> ?", "");
                         String unannotatedDoc = doc.getText(0, doc.getLength()).replaceAll(highlighted, unannotated);
                         doc.remove(0, doc.getLength());
@@ -826,7 +826,7 @@ public class Main extends JFrame {
                     int lineCaret = caret - start;
                     if (lineStart < lineCaret && lineCaret < lineEnd) { //inside the target annotation
                         String annotatedChunk = currentLine.substring(lineStart, lineEnd);
-                        String annotationRemoved = annotatedChunk.replaceAll(" ?<START:" + annotationType + "> ", "");
+                        String annotationRemoved = annotatedChunk.replaceAll(" ?<START:" + Pattern.quote(annotationType) + "> ", "");
                         annotationRemoved = annotationRemoved.replaceAll(" <END> ?", "");
                         String unannotatedDoc = doc.getText(0, doc.getLength()).replaceAll(annotatedChunk, annotationRemoved);
                         doc.remove(0, doc.getLength());
@@ -1342,7 +1342,7 @@ public class Main extends JFrame {
     }
 
     private boolean validateForSave() {
-        Pattern duplicateTags = Pattern.compile("<START:[\\w]*?>(?=(?:(?!<END>).)*<START:[\\w]*?>)", Pattern.MULTILINE);
+        Pattern duplicateTags = Pattern.compile("<START:[\\w\\(\\)]*?>(?=(?:(?!<END>).)*<START:[\\w]*?>)", Pattern.MULTILINE);
         boolean isValid = true;
 
         try {
