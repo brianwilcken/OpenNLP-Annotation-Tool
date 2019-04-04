@@ -564,8 +564,8 @@ public class DocumentSelector extends JFrame {
                 List<Map<String, Object>> document = ((List<Map<String, Object>>) jsonDict.get("data"));
 
                 if (document.size() > 0) {
-                    mainUI.reloadHistory();
                     mainUI.loadDocument(document.get(0));
+                    mainUI.reloadHistory();
                 }
             }
         } catch (URISyntaxException e) {

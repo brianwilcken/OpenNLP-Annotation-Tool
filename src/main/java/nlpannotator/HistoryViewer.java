@@ -27,6 +27,7 @@ public class HistoryViewer extends JFrame {
     private JTable table1;
     private JPanel panel1;
     private Main mainUI;
+    private DefaultTableModel tableModel;
 
     public HistoryViewer(Main mainUI) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
@@ -42,6 +43,7 @@ public class HistoryViewer extends JFrame {
         pack();
 
         initListeners();
+        initTableModel();
     }
 
     private void initListeners() {
@@ -53,6 +55,23 @@ public class HistoryViewer extends JFrame {
                 }
             }
         });
+    }
+
+    private void initTableModel() {
+        tableModel = new DefaultTableModel();
+        tableModel.addColumn("ID");
+        tableModel.addColumn("User ID");
+        tableModel.addColumn("Last Updated");
+
+        table1.setModel(tableModel);
+
+        table1.getColumn("ID").setMaxWidth(0);
+        table1.getColumn("ID").setMinWidth(0);
+        table1.getColumn("ID").setResizable(false);
+
+        table1.setDefaultEditor(Object.class, null);
+        table1.setAutoCreateRowSorter(true);
+        table1.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
     }
 
     public void populate(Map<Object, Object> document) {
@@ -72,10 +91,9 @@ public class HistoryViewer extends JFrame {
 
             List<Map<String, Object>> history = ((List<Map<String, Object>>) jsonDict.get("data"));
 
-            DefaultTableModel tableModel = new DefaultTableModel();
-            tableModel.addColumn("ID");
-            tableModel.addColumn("User ID");
-            tableModel.addColumn("Last Updated");
+            for (int r = tableModel.getRowCount() - 1; r >= 0; r--) {
+                tableModel.removeRow(r);
+            }
 
             for (Map historyEntry : history) {
                 String id = historyEntry.get("id").toString();
@@ -83,13 +101,6 @@ public class HistoryViewer extends JFrame {
                 String lastUpdated = Tools.getFormattedDateTimeString(Instant.ofEpochMilli((long) historyEntry.get("created")));
                 tableModel.addRow(new Object[]{id, userId, lastUpdated});
             }
-
-            table1.setModel(tableModel);
-
-            table1.getColumn("ID").setMaxWidth(0);
-            table1.getColumn("ID").setMinWidth(0);
-            table1.getColumn("ID").setResizable(false);
-            table1.setDefaultEditor(Object.class, null);
         } catch (URISyntaxException e) {
             JOptionPane.showMessageDialog(mainUI, e.getMessage());
         }
