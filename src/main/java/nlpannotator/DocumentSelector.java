@@ -566,6 +566,7 @@ public class DocumentSelector extends JFrame {
                 if (document.size() > 0) {
                     mainUI.loadDocument(document.get(0));
                     mainUI.reloadHistory();
+                    mainUI.refreshMetadataEditor();
                 }
             }
         } catch (URISyntaxException e) {

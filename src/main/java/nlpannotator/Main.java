@@ -83,6 +83,7 @@ public class Main extends JFrame {
     private ProcessMonitor processMonitor;
     private DocumentSelector documentSelector;
     private HistoryViewer historyViewer;
+    private MetadataEditor metadataEditor;
     private AutoDetectionThreshold autoDetectionThreshold;
     private AnnotatedLinesTracker annotatedLinesTracker;
     private FindAndReplace findAndReplace;
@@ -1080,13 +1081,33 @@ public class Main extends JFrame {
     }
 
     public void updateMetadata(Map<Object, Object> doc) {
-        this.document = doc;
+        for (Object key : doc.keySet()) {
+            Object val = doc.get(key);
+            if (document.containsKey(key)) {
+                document.replace(key, val);
+            } else {
+                document.put(key, val);
+            }
+        }
     }
 
-    private void showMetadataEditor() {
+    private MetadataEditor getMetadataEditor() {
+        if (metadataEditor == null) {
+            metadataEditor = new MetadataEditor(this);
+        }
+        return metadataEditor;
+    }
+
+    public void showMetadataEditor() {
         if (document != null) {
-            MetadataEditor editor = new MetadataEditor(this);
-            editor.populate(document);
+            getMetadataEditor().setVisible(true);
+            refreshMetadataEditor();
+        }
+    }
+
+    public void refreshMetadataEditor() {
+        if (getMetadataEditor().isVisible()) {
+            getMetadataEditor().populate(document);
         }
     }
 
@@ -1448,6 +1469,7 @@ public class Main extends JFrame {
 
                     if (response.getStatusCode() == HttpStatus.OK) {
                         reloadHistory();
+                        refreshMetadataEditor();
                         documentSelector.populate();
                     } else {
                         JOptionPane.showMessageDialog(this, "SAVE FAILURE!!!");
