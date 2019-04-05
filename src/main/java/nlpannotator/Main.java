@@ -290,7 +290,7 @@ public class Main extends JFrame {
         midbar = new JToolBar();
         mainPanel.add(midbar, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(-1, 20), null, 0, false));
         entityAutoDetectionButton = new JButton();
-        entityAutoDetectionButton.setText("Entity Auto-Detection");
+        entityAutoDetectionButton.setText("NER Model Library");
         midbar.add(entityAutoDetectionButton);
         final JToolBar.Separator toolBar$Separator6 = new JToolBar.Separator();
         midbar.add(toolBar$Separator6);
@@ -1071,13 +1071,11 @@ public class Main extends JFrame {
     }
 
     public void showAutoDetectionThreshold() {
-        if (document != null) {
-            if (autoDetectionThreshold == null) {
-                autoDetectionThreshold = new AutoDetectionThreshold(this);
-            }
-            autoDetectionThreshold.ddlCategorySelectionChanged(null);
-            autoDetectionThreshold.setVisible(true);
+        if (autoDetectionThreshold == null) {
+            autoDetectionThreshold = new AutoDetectionThreshold(this);
         }
+        autoDetectionThreshold.ddlCategorySelectionChanged(null);
+        autoDetectionThreshold.setVisible(true);
     }
 
     public void updateMetadata(Map<Object, Object> doc) {

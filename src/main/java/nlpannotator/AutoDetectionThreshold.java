@@ -18,6 +18,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +77,8 @@ public class AutoDetectionThreshold extends JFrame {
         tblModelListModel.addColumn("Test Accuracy");
         tblModelListModel.addColumn("F-Measure");
         tblModelListModel.addColumn("");
+        tblModelListModel.addColumn("");
+        tblModelListModel.addColumn("");
 
         tblModelList.setModel(tblModelListModel);
 
@@ -88,9 +91,13 @@ public class AutoDetectionThreshold extends JFrame {
         autoDetectNERButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
-                double threshold = Double.parseDouble(spnrPrecision.getValue().toString());
-                Map<String, String> modelVersion = getModelVersion();
-                mainUI.autoAnnotateDocument(threshold, modelVersion);
+                if (mainUI.document != null) {
+                    double threshold = Double.parseDouble(spnrPrecision.getValue().toString());
+                    Map<String, String> modelVersion = getModelVersion();
+                    mainUI.autoAnnotateDocument(threshold, modelVersion);
+                } else {
+                    JOptionPane.showMessageDialog(mainUI, "Please load a document...");
+                }
             }
         });
 
@@ -177,7 +184,7 @@ public class AutoDetectionThreshold extends JFrame {
             String entityAccuracy = model.get("entityAccuracy") != null ? model.get("entityAccuracy").toString() : "N/A";
             String entityFMeasure = model.get("entityFMeasure") != null ? model.get("entityFMeasure").toString() : "N/A";
 
-            tblModelListModel.addRow(new Object[]{modelVersion, modelDate, numModelSentences, numTestSentences, numTestTags, entityAccuracy, entityFMeasure, "See Detailed Test Report"});
+            tblModelListModel.addRow(new Object[]{modelVersion, modelDate, numModelSentences, numTestSentences, numTestTags, entityAccuracy, entityFMeasure, "See Detailed Test Report", "Review Predictions", "Review Training Data"});
         }
 
         Action seeDetails = new AbstractAction() {
@@ -186,8 +193,22 @@ public class AutoDetectionThreshold extends JFrame {
                 showModelDetails(actionEvent);
             }
         };
+        Action reviewPredictions = new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                reviewModelData("predLines", "Predictions");
+            }
+        };
+        Action reviewTrainingData = new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                reviewModelData("refLines", "Training Data");
+            }
+        };
 
-        ButtonColumn buttonColumn = new ButtonColumn(tblModelList, seeDetails, 7);
+        ButtonColumn detailsColumn = new ButtonColumn(tblModelList, seeDetails, 7);
+        ButtonColumn predColumn = new ButtonColumn(tblModelList, reviewPredictions, 8);
+        ButtonColumn refColumn = new ButtonColumn(tblModelList, reviewTrainingData, 9);
     }
 
     private void showModelDetails(ActionEvent e) {
@@ -210,6 +231,43 @@ public class AutoDetectionThreshold extends JFrame {
                 //JOptionPane.showMessageDialog(this, scrollPane, "Model Details", JOptionPane.INFORMATION_MESSAGE);
                 break;
             }
+        }
+    }
+
+    private void reviewModelData(String attribute, String title) {
+        try {
+            Map<String, String> modelVersion = getModelVersion();
+            String category = modelVersion.keySet().toArray()[0].toString();
+            String version = modelVersion.get(category);
+
+            ParameterizedTypeReference<HashMap<String, Object>> responseType =
+                    new ParameterizedTypeReference<HashMap<String, Object>>() {
+                    };
+
+            RequestEntity<Void> request = RequestEntity.get(new URI(mainUI.getHostURL() + "/documents/NERModelReviewPredictions" + "?category=" + category + "&version=" + version))
+                    .accept(MediaType.APPLICATION_JSON).build();
+
+            ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
+            Map<String, Object> jsonDict = response.getBody();
+
+            if (response.getStatusCode() != HttpStatus.OK) {
+                JOptionPane.showMessageDialog(this, "Server error has occurred!!");
+            } else {
+                Map<String, Object> data = ((Map<String, Object>) jsonDict.get("data"));
+                String attrData = data.get(attribute).toString();
+                List categories = new ArrayList();
+                categories.add(category);
+
+                Map document = new HashMap();
+                document.put("category", categories);
+                document.put("filename", category + " Model Version " + version + " " + title);
+                document.put("annotated", attrData);
+
+                mainUI.loadDocument(document);
+            }
+
+        } catch (URISyntaxException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage());
         }
     }
 

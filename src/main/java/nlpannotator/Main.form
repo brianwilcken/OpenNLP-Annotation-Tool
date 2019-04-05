@@ -210,7 +210,7 @@
           <component id="b3866" class="javax.swing.JButton" binding="entityAutoDetectionButton" default-binding="true">
             <constraints/>
             <properties>
-              <text value="Entity Auto-Detection"/>
+              <text value="NER Model Library"/>
             </properties>
           </component>
           <component id="19568" class="javax.swing.JToolBar$Separator">
