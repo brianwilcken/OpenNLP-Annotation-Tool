@@ -47,7 +47,7 @@ public class AutoDetectionThreshold extends JFrame {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         restTemplate = new RestTemplate(requestFactory);
 
-        setTitle("Entity Auto Detection");
+        setTitle("NER Model Library");
         setContentPane(sliderPanel);
         if (mainUI != null) {
             setLocation(mainUI.getLocationOnScreen());
@@ -184,7 +184,7 @@ public class AutoDetectionThreshold extends JFrame {
             String entityAccuracy = model.get("entityAccuracy") != null ? model.get("entityAccuracy").toString() : "N/A";
             String entityFMeasure = model.get("entityFMeasure") != null ? model.get("entityFMeasure").toString() : "N/A";
 
-            tblModelListModel.addRow(new Object[]{modelVersion, modelDate, numModelSentences, numTestSentences, numTestTags, entityAccuracy, entityFMeasure, "See Detailed Test Report", "Review Predictions", "Review Training Data"});
+            tblModelListModel.addRow(new Object[]{modelVersion, modelDate, numModelSentences, numTestSentences, numTestTags, entityAccuracy, entityFMeasure, "See Detailed Test Report", "Review Predictions", "Review Testing Corpus"});
         }
 
         Action seeDetails = new AbstractAction() {
@@ -202,7 +202,7 @@ public class AutoDetectionThreshold extends JFrame {
         Action reviewTrainingData = new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
-                reviewModelData("refLines", "Training Data");
+                reviewModelData("refLines", "Testing Corpus");
             }
         };
 
