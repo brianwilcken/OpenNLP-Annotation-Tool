@@ -1013,8 +1013,17 @@ public class Main extends JFrame {
                 ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
 
                 if (response.getStatusCode() == HttpStatus.OK) {
-                    double accuracy = (double) response.getBody().get("data") * 100;
-                    JOptionPane.showMessageDialog(this, "Model accuracy: " + accuracy + "%");
+                    String report = response.getBody().get("data").toString();
+                    JTextArea resultText = new JTextArea(report);
+                    JScrollPane scrollPane = new JScrollPane();
+                    scrollPane.setViewportView(resultText);
+                    scrollPane.setPreferredSize(new Dimension(2200, 1080));
+                    resultText.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+
+                    JOptionPane pane = new JOptionPane(scrollPane, JOptionPane.INFORMATION_MESSAGE, JOptionPane.DEFAULT_OPTION);
+                    JDialog dialog = pane.createDialog(this, "Doccat Model Test Report");
+                    dialog.setModal(false);
+                    dialog.setVisible(true);
                 } else {
                     JOptionPane.showMessageDialog(this, "Server error has occurred!!");
                 }
