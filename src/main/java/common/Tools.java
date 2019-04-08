@@ -18,6 +18,7 @@ import com.google.common.base.Charsets;
 import com.google.common.io.Files;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.text.similarity.LevenshteinDistance;
 import org.springframework.core.io.ClassPathResource;
 
 import javax.swing.*;
@@ -184,5 +185,22 @@ public class Tools {
         List<String> entries = dict.getEntry().stream().map(p -> StringUtils.join(p.getToken(), " ")).collect(Collectors.toList());
 
         return entries;
+    }
+
+    public static double similarity(String s1, String s2) {
+        if (s1 == null && s2 == null) {
+            return 1.0;
+        } else if ((s1 != null && s2 == null) || (s1 == null && s2 != null)) {
+            return 0.0;
+        } else {
+            String longer = s1, shorter = s2;
+            if (s1.length() < s2.length()) { // longer should always have greater length
+                longer = s2; shorter = s1;
+            }
+            int longerLength = longer.length();
+            if (longerLength == 0) { return 1.0; /* both strings are zero length */ }
+            LevenshteinDistance levenshteinDistance = new LevenshteinDistance();
+            return (longerLength - levenshteinDistance.apply(longer, shorter)) / (double) longerLength;
+        }
     }
 }
