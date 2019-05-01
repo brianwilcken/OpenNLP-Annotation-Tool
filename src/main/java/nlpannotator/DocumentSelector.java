@@ -64,6 +64,7 @@ public class DocumentSelector extends JFrame {
     private FileDrop fileDrop;
     private DefaultTableModel tableModel;
     private boolean clearingTableModel;
+    private CrawlDepth crawlDepth;
 
     public DocumentSelector(Main mainUI) {
         this.mainUI = mainUI;
@@ -84,6 +85,8 @@ public class DocumentSelector extends JFrame {
         pack();
 
         setVisible(true);
+
+        crawlDepth = new CrawlDepth(this);
     }
 
     public static void main(String[] args) {
@@ -399,17 +402,18 @@ public class DocumentSelector extends JFrame {
     }
 
     public void crawlURLActionListener(ActionEvent evt) {
+        crawlDepth.setVisible(true);
+    }
+
+    public void startCrawling(int depth) {
         try {
-            if (JOptionPane.showConfirmDialog(this, "This could take a very long time.  Are you sure?") == 0) {
-                textField1.setBackground(new Color(Color.WHITE.getRGB()));
-                String urlString = textField1.getText();
-                URL url = new URL(urlString);
+            textField1.setBackground(new Color(Color.WHITE.getRGB()));
+            String urlString = textField1.getText();
+            URL url = new URL(urlString);
 
-                CrawlURLTask crawlURLTask = new CrawlURLTask(url.toString());
-                Thread thread = new Thread(crawlURLTask);
-                thread.start();
-            }
-
+            CrawlURLTask crawlURLTask = new CrawlURLTask(url.toString(), depth);
+            Thread thread = new Thread(crawlURLTask);
+            thread.start();
         } catch (MalformedURLException e) {
             textField1.setBackground(new Color(Color.RED.getRGB()));
         } catch (Exception e) {
@@ -710,9 +714,11 @@ public class DocumentSelector extends JFrame {
     private class CrawlURLTask implements Runnable {
 
         private String url;
+        private String depth;
 
-        public CrawlURLTask(String url) {
+        public CrawlURLTask(String url, int depth) {
             this.url = url;
+            this.depth = Integer.toString(depth);
         }
 
         @Override
@@ -727,6 +733,7 @@ public class DocumentSelector extends JFrame {
 
                 MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
                 body.add("url", url);
+                body.add("depth", depth);
 
                 RequestEntity<MultiValueMap<String, Object>> request = RequestEntity.post(new URI(mainUI.getHostURL() + "/documents/crawl"))
                         .accept(MediaType.APPLICATION_JSON)
