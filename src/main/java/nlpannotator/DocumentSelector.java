@@ -59,6 +59,7 @@ public class DocumentSelector extends JFrame {
     private JTextField txtOrganization;
     private JButton updateOrganizationButton;
     private JTextField srchOrganization;
+    private JButton crawlGoogleButton;
     private List<Map<String, Object>> documents;
     private Main mainUI;
     private FileDrop fileDrop;
@@ -282,6 +283,13 @@ public class DocumentSelector extends JFrame {
             }
         });
 
+        crawlGoogleButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                crawlGoogle();
+            }
+        });
+
         updateProjectButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
@@ -416,6 +424,19 @@ public class DocumentSelector extends JFrame {
             thread.start();
         } catch (MalformedURLException e) {
             textField1.setBackground(new Color(Color.RED.getRGB()));
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(mainUI, e.getMessage());
+        }
+    }
+
+    public void crawlGoogle() {
+        try {
+            textField1.setBackground(new Color(Color.WHITE.getRGB()));
+            String searchTerm = textField1.getText();
+
+            CrawlGoogleTask crawlGoogleTask = new CrawlGoogleTask(searchTerm);
+            Thread thread = new Thread(crawlGoogleTask);
+            thread.start();
         } catch (Exception e) {
             JOptionPane.showMessageDialog(mainUI, e.getMessage());
         }
@@ -647,10 +668,10 @@ public class DocumentSelector extends JFrame {
         srchOrganization = new JTextField();
         panel2.add(srchOrganization, new GridConstraints(5, 1, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         final JPanel panel3 = new JPanel();
-        panel3.setLayout(new GridLayoutManager(1, 4, new Insets(5, 5, 5, 5), -1, -1));
-        tabbedPane1.addTab("Load URL", panel3);
+        panel3.setLayout(new GridLayoutManager(1, 5, new Insets(5, 5, 5, 5), -1, -1));
+        tabbedPane1.addTab("Google Search/Load URL", panel3);
         final JLabel label8 = new JLabel();
-        label8.setText("Resource URL:");
+        label8.setText("Search Term/URL:");
         panel3.add(label8, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         textField1 = new JTextField();
         textField1.setText("");
@@ -661,6 +682,9 @@ public class DocumentSelector extends JFrame {
         crawlURLButton = new JButton();
         crawlURLButton.setText("Crawl URL");
         panel3.add(crawlURLButton, new GridConstraints(0, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        crawlGoogleButton = new JButton();
+        crawlGoogleButton.setText("Crawl Google");
+        panel3.add(crawlGoogleButton, new GridConstraints(0, 4, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JPanel panel4 = new JPanel();
         panel4.setLayout(new GridLayoutManager(4, 3, new Insets(5, 5, 5, 5), -1, -1));
         tabbedPane1.addTab("Change Attributes", panel4);
@@ -736,6 +760,41 @@ public class DocumentSelector extends JFrame {
                 body.add("depth", depth);
 
                 RequestEntity<MultiValueMap<String, Object>> request = RequestEntity.post(new URI(mainUI.getHostURL() + "/documents/crawl"))
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .body(body);
+
+                ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
+            } catch (URISyntaxException e) {
+                JOptionPane.showMessageDialog(mainUI, e.getMessage());
+            } finally {
+                procMon.removeProcess(procId);
+            }
+        }
+    }
+
+    private class CrawlGoogleTask implements Runnable {
+
+        private String searchTerm;
+
+        public CrawlGoogleTask(String searchTerm) {
+            this.searchTerm = searchTerm;
+        }
+
+        @Override
+        public void run() {
+            ProcessMonitor procMon = mainUI.getProcessMonitor();
+            procMon.setVisible(true);
+            String procId = procMon.addProcess("(" + Instant.now() + ") Crawling Google: " + searchTerm);
+            try {
+                ParameterizedTypeReference<HashMap<String, Object>> responseType =
+                        new ParameterizedTypeReference<HashMap<String, Object>>() {
+                        };
+
+                MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+                body.add("searchTerm", searchTerm);
+
+                RequestEntity<MultiValueMap<String, Object>> request = RequestEntity.post(new URI(mainUI.getHostURL() + "/documents/crawlGoogle"))
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .body(body);
