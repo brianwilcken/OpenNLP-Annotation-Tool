@@ -4,8 +4,10 @@ import com.google.common.base.Strings;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
+import common.CrawlGoogleManager;
 import common.FacilityTypes;
 import common.Tools;
+import org.apache.commons.io.FileUtils;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.*;
@@ -20,11 +22,15 @@ import org.springframework.web.client.RestTemplate;
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.io.File;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.*;
 import java.time.Instant;
@@ -39,7 +45,7 @@ public class DocumentSelector extends JFrame {
     private JTextField textField1;
     private JButton loadURLButton;
     private JButton crawlURLButton;
-    private JTable table1;
+    private JTable tblDocuments;
     private JButton deleteButton;
     private JCheckBox showNotApplicableDocumentsCheckBox;
     private JButton updateProjectButton;
@@ -59,23 +65,33 @@ public class DocumentSelector extends JFrame {
     private JTextField txtOrganization;
     private JButton updateOrganizationButton;
     private JTextField srchOrganization;
+    private JTextField txtGoogleSearchTerm;
     private JButton crawlGoogleButton;
+    private JTable tblCrawlSchedule;
+    private JButton loadGoogleCrawlScheduleButton;
+    private JButton clearCrawlScheduleButton;
     private List<Map<String, Object>> documents;
     private Main mainUI;
     private FileDrop fileDrop;
-    private DefaultTableModel tableModel;
+    private DefaultTableModel tblDocumentsModel;
+    private DefaultTableModel tblCrawlScheduleModel;
     private boolean clearingTableModel;
     private CrawlDepth crawlDepth;
+    private CrawlGoogleManager mgr;
+    private List<CrawlGoogleTask> crawlGoogleTasks;
 
     public DocumentSelector(Main mainUI) {
         this.mainUI = mainUI;
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         restTemplate = new RestTemplate(requestFactory);
+        mgr = new CrawlGoogleManager();
+        crawlGoogleTasks = new ArrayList<>();
 
         populateCategorySearch();
         populateUpdateCategory();
         populateUpdateUse();
-        initTableModel();
+        initDocumentTableModel();
+        initCrawlStatusTableModel();
         populate();
 
         addEventListeners();
@@ -94,43 +110,55 @@ public class DocumentSelector extends JFrame {
         DocumentSelector selector = new DocumentSelector(null);
     }
 
-    private void initTableModel() {
-        tableModel = new DefaultTableModel();
-        tableModel.addColumn("ID");
-        tableModel.addColumn("Filename");
-        tableModel.addColumn("URL");
-        tableModel.addColumn("Category");
-        tableModel.addColumn("Project");
-        tableModel.addColumn("Organization");
-        tableModel.addColumn("Last Updated");
-        tableModel.addColumn("Updated By");
-        tableModel.addColumn("% Annotated");
-        tableModel.addColumn("Size (lines)");
-        tableModel.addColumn("Use");
+    private void initDocumentTableModel() {
+        tblDocumentsModel = new DefaultTableModel();
+        tblDocumentsModel.addColumn("ID");
+        tblDocumentsModel.addColumn("Filename");
+        tblDocumentsModel.addColumn("URL");
+        tblDocumentsModel.addColumn("Category");
+        tblDocumentsModel.addColumn("Project");
+        tblDocumentsModel.addColumn("Organization");
+        tblDocumentsModel.addColumn("Last Updated");
+        tblDocumentsModel.addColumn("Updated By");
+        tblDocumentsModel.addColumn("% Annotated");
+        tblDocumentsModel.addColumn("Size (lines)");
+        tblDocumentsModel.addColumn("Use");
 
-        table1.setModel(tableModel);
+        tblDocuments.setModel(tblDocumentsModel);
 
-        table1.getColumn("ID").setMaxWidth(0);
-        table1.getColumn("ID").setMinWidth(0);
-        table1.getColumn("ID").setResizable(false);
-        table1.getColumn("Last Updated").setMaxWidth(200);
-        table1.getColumn("Last Updated").setMinWidth(200);
-        table1.getColumn("Last Updated").setResizable(false);
-        table1.getColumn("Updated By").setMaxWidth(100);
-        table1.getColumn("Updated By").setMinWidth(100);
-        table1.getColumn("Updated By").setResizable(false);
-        table1.getColumn("% Annotated").setMaxWidth(100);
-        table1.getColumn("% Annotated").setMinWidth(100);
-        table1.getColumn("% Annotated").setResizable(false);
-        table1.getColumn("Size (lines)").setMaxWidth(100);
-        table1.getColumn("Size (lines)").setMinWidth(100);
-        table1.getColumn("Size (lines)").setResizable(false);
-        table1.getColumn("Use").setMaxWidth(100);
-        table1.getColumn("Use").setMinWidth(100);
-        table1.getColumn("Use").setResizable(false);
-        table1.setDefaultEditor(Object.class, null);
-        table1.setAutoCreateRowSorter(true);
-        table1.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+        tblDocuments.getColumn("ID").setMaxWidth(0);
+        tblDocuments.getColumn("ID").setMinWidth(0);
+        tblDocuments.getColumn("ID").setResizable(false);
+        tblDocuments.getColumn("Last Updated").setMaxWidth(200);
+        tblDocuments.getColumn("Last Updated").setMinWidth(200);
+        tblDocuments.getColumn("Last Updated").setResizable(false);
+        tblDocuments.getColumn("Updated By").setMaxWidth(100);
+        tblDocuments.getColumn("Updated By").setMinWidth(100);
+        tblDocuments.getColumn("Updated By").setResizable(false);
+        tblDocuments.getColumn("% Annotated").setMaxWidth(100);
+        tblDocuments.getColumn("% Annotated").setMinWidth(100);
+        tblDocuments.getColumn("% Annotated").setResizable(false);
+        tblDocuments.getColumn("Size (lines)").setMaxWidth(100);
+        tblDocuments.getColumn("Size (lines)").setMinWidth(100);
+        tblDocuments.getColumn("Size (lines)").setResizable(false);
+        tblDocuments.getColumn("Use").setMaxWidth(100);
+        tblDocuments.getColumn("Use").setMinWidth(100);
+        tblDocuments.getColumn("Use").setResizable(false);
+        tblDocuments.setDefaultEditor(Object.class, null);
+        tblDocuments.setAutoCreateRowSorter(true);
+        tblDocuments.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+    }
+
+    private void initCrawlStatusTableModel() {
+        tblCrawlScheduleModel = new DefaultTableModel();
+        tblCrawlScheduleModel.addColumn("Search Term");
+        tblCrawlScheduleModel.addColumn("Crawl Status");
+
+        tblCrawlSchedule.setModel(tblCrawlScheduleModel);
+
+        tblCrawlSchedule.setDefaultEditor(Object.class, null);
+        tblCrawlSchedule.setAutoCreateRowSorter(true);
+        tblCrawlSchedule.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
     }
 
     private void populateCategorySearch() {
@@ -196,8 +224,8 @@ public class DocumentSelector extends JFrame {
 
             //clear out the table model before re-populating it with data
             clearingTableModel = true;
-            for (int r = tableModel.getRowCount() - 1; r >= 0; r--) {
-                tableModel.removeRow(r);
+            for (int r = tblDocumentsModel.getRowCount() - 1; r >= 0; r--) {
+                tblDocumentsModel.removeRow(r);
             }
             clearingTableModel = false;
 
@@ -242,7 +270,7 @@ public class DocumentSelector extends JFrame {
                     }
                 }
 
-                tableModel.addRow(new Object[]{id, filename, url, category, project, organization, lastUpdatedStr, annotatedBy, percentAnnotated, totalLines, use});
+                tblDocumentsModel.addRow(new Object[]{id, filename, url, category, project, organization, lastUpdatedStr, annotatedBy, percentAnnotated, totalLines, use});
             }
 
             lblNumDocs.setText(Integer.toString(numDocs));
@@ -256,13 +284,13 @@ public class DocumentSelector extends JFrame {
     }
 
     private void addEventListeners() {
-        table1.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+        tblDocuments.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
             public void valueChanged(ListSelectionEvent event) {
                 listSelectActionListener(event);
             }
         });
 
-        fileDrop = new FileDrop(table1, new FileDrop.Listener() {
+        fileDrop = new FileDrop(tblDocuments, new FileDrop.Listener() {
             @Override
             public void filesDropped(File[] files) {
                 uploadFiles(files);
@@ -280,6 +308,41 @@ public class DocumentSelector extends JFrame {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
                 crawlURLActionListener(actionEvent);
+            }
+        });
+
+        txtGoogleSearchTerm.addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent keyEvent) {
+
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    String searchTerm = txtGoogleSearchTerm.getText();
+                    txtGoogleSearchTerm.setText("");
+                    tblCrawlScheduleModel.addRow(new Object[]{searchTerm, "Pending"});
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent keyEvent) {
+
+            }
+        });
+
+        loadGoogleCrawlScheduleButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                loadGoogleCrawlSchedule();
+            }
+        });
+
+        clearCrawlScheduleButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                clearGoogleCrawlSchedule();
             }
         });
 
@@ -331,6 +394,55 @@ public class DocumentSelector extends JFrame {
                 deleteActionListener(actionEvent);
             }
         });
+    }
+
+    private void loadGoogleCrawlSchedule() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setCurrentDirectory(new File("."));
+        chooser.setDialogTitle("Choose File");
+        chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        chooser.setAcceptAllFileFilterUsed(false);
+        chooser.setFileFilter(new FileNameExtensionFilter("Text Files", "txt"));
+
+        if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+            File file = chooser.getSelectedFile();
+            try {
+                String schedule = FileUtils.readFileToString(file);
+                String[] terms = schedule.split(System.lineSeparator());
+
+                //clear out all previous search terms
+                clearGoogleCrawlScheduleTable();
+
+                for (String term : terms) {
+                    if (!term.startsWith("#")) {
+                        tblCrawlScheduleModel.addRow(new Object[]{term, "Pending"});
+                    }
+                }
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(this, e.getMessage());
+            }
+        }
+    }
+
+    private void clearGoogleCrawlScheduleTable() {
+        for (int r = tblCrawlScheduleModel.getRowCount() - 1; r >= 0; r--) {
+            tblCrawlScheduleModel.removeRow(r);
+        }
+    }
+
+    private void clearGoogleCrawlSchedule() {
+        if (crawlGoogleTasks.stream().anyMatch(p -> p.isActive())) {
+            int input = JOptionPane.showConfirmDialog(this, "Active crawl tasks are underway.  Are you sure you want to cancel?", "Confirm Cancel Crawl Tasks", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+            if (input == 0) { //yes
+                for (CrawlGoogleTask task : crawlGoogleTasks) {
+                    task.kill();
+                }
+                clearGoogleCrawlScheduleTable();
+                crawlGoogleTasks.clear();
+            }
+        } else {
+            clearGoogleCrawlScheduleTable();
+        }
     }
 
     private void uploadFiles(File[] files) {
@@ -431,12 +543,13 @@ public class DocumentSelector extends JFrame {
 
     public void crawlGoogle() {
         try {
-            textField1.setBackground(new Color(Color.WHITE.getRGB()));
-            String searchTerm = textField1.getText();
-
-            CrawlGoogleTask crawlGoogleTask = new CrawlGoogleTask(searchTerm);
-            Thread thread = new Thread(crawlGoogleTask);
-            thread.start();
+            crawlGoogleTasks.clear();
+            for (int r = 0; r < tblCrawlScheduleModel.getRowCount(); r++) {
+                String searchTerm = tblCrawlScheduleModel.getValueAt(r, 0).toString();
+                CrawlGoogleTask crawlGoogleTask = new CrawlGoogleTask(searchTerm);
+                crawlGoogleTask.setMyThread(mgr.startProcess(crawlGoogleTask));
+                crawlGoogleTasks.add(crawlGoogleTask);
+            }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(mainUI, e.getMessage());
         }
@@ -451,12 +564,12 @@ public class DocumentSelector extends JFrame {
 
         populate();
         int numDocs = Integer.parseInt(lblNumDocs.getText());
-        for (int r = tableModel.getRowCount() - 1; r >= 0; r--) {
-            String filename = tableModel.getValueAt(r, 1).toString().toLowerCase();
-            String url = tableModel.getValueAt(r, 2).toString().toLowerCase();
-            String category = tableModel.getValueAt(r, 3).toString().toLowerCase();
-            String project = tableModel.getValueAt(r, 4).toString().toLowerCase();
-            String organization = tableModel.getValueAt(r, 4).toString().toLowerCase();
+        for (int r = tblDocumentsModel.getRowCount() - 1; r >= 0; r--) {
+            String filename = tblDocumentsModel.getValueAt(r, 1).toString().toLowerCase();
+            String url = tblDocumentsModel.getValueAt(r, 2).toString().toLowerCase();
+            String category = tblDocumentsModel.getValueAt(r, 3).toString().toLowerCase();
+            String project = tblDocumentsModel.getValueAt(r, 4).toString().toLowerCase();
+            String organization = tblDocumentsModel.getValueAt(r, 4).toString().toLowerCase();
 
             boolean includeRow = Strings.isNullOrEmpty(filenameSrch) || Tools.similarity(filenameSrch, filename) > 0.6 || filename.contains(filenameSrch);
             includeRow = includeRow && (Strings.isNullOrEmpty(urlSrch) || Tools.similarity(urlSrch, url) > 0.6 || url.contains(urlSrch));
@@ -464,7 +577,7 @@ public class DocumentSelector extends JFrame {
             includeRow = includeRow && (Strings.isNullOrEmpty(projectSrch) || Tools.similarity(projectSrch, project) > 0.6);
             includeRow = includeRow && (Strings.isNullOrEmpty(organizationSrch) || Tools.similarity(organizationSrch, organization) > 0.6);
             if (!includeRow) {
-                tableModel.removeRow(r);
+                tblDocumentsModel.removeRow(r);
                 --numDocs;
             }
         }
@@ -472,7 +585,7 @@ public class DocumentSelector extends JFrame {
     }
 
     private void updateProject() {
-        if (table1.getSelectedRow() != -1) {
+        if (tblDocuments.getSelectedRow() != -1) {
             String project = txtProject.getText();
             if (Strings.isNullOrEmpty(project)) {
                 JOptionPane.showMessageDialog(this, "Enter a project name...");
@@ -486,7 +599,7 @@ public class DocumentSelector extends JFrame {
     }
 
     private void updateOrganization() {
-        if (table1.getSelectedRow() != -1) {
+        if (tblDocuments.getSelectedRow() != -1) {
             String organization = txtOrganization.getText();
             if (Strings.isNullOrEmpty(organization)) {
                 JOptionPane.showMessageDialog(this, "Enter an organization name...");
@@ -500,7 +613,7 @@ public class DocumentSelector extends JFrame {
     }
 
     private void updateCategory() {
-        if (table1.getSelectedRow() != -1) {
+        if (tblDocuments.getSelectedRow() != -1) {
             List categories = new ArrayList();
             categories.add(ddlUpdateCategory.getSelectedItem());
             updateAttribute("category", categories);
@@ -511,7 +624,7 @@ public class DocumentSelector extends JFrame {
     }
 
     private void updateUse() {
-        if (table1.getSelectedRow() != -1) {
+        if (tblDocuments.getSelectedRow() != -1) {
             if (ddlUpdateUse.getSelectedIndex() == 0) {
                 updateAttribute("includeInNERTraining", false);
                 updateAttribute("includeInNERTesting", false);
@@ -530,9 +643,9 @@ public class DocumentSelector extends JFrame {
 
     private void updateAttribute(String attrName, Object attr) {
         try {
-            int[] rows = table1.getSelectedRows();
+            int[] rows = tblDocuments.getSelectedRows();
             for (int r = 0; r < rows.length; r++) {
-                String id = table1.getValueAt(rows[r], 0).toString();
+                String id = tblDocuments.getValueAt(rows[r], 0).toString();
                 ParameterizedTypeReference<HashMap<String, Object>> responseType =
                         new ParameterizedTypeReference<HashMap<String, Object>>() {
                         };
@@ -567,10 +680,10 @@ public class DocumentSelector extends JFrame {
 
     public void deleteActionListener(ActionEvent evt) {
         try {
-            if (table1.getSelectedRow() != -1 && JOptionPane.showConfirmDialog(this, "Are you sure (this action cannot be undone)?") == 0) {
-                int[] rows = table1.getSelectedRows();
+            if (tblDocuments.getSelectedRow() != -1 && JOptionPane.showConfirmDialog(this, "Are you sure (this action cannot be undone)?") == 0) {
+                int[] rows = tblDocuments.getSelectedRows();
                 for (int r = 0; r < rows.length; r++) {
-                    String id = table1.getValueAt(rows[r], 0).toString();
+                    String id = tblDocuments.getValueAt(rows[r], 0).toString();
                     ParameterizedTypeReference<HashMap<String, Object>> responseType =
                             new ParameterizedTypeReference<HashMap<String, Object>>() {
                             };
@@ -617,8 +730,8 @@ public class DocumentSelector extends JFrame {
         scrollPane1 = new JScrollPane();
         scrollPane1.setHorizontalScrollBarPolicy(30);
         panel1.add(scrollPane1, new GridConstraints(2, 0, 1, 11, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(1200, 600), new Dimension(1200, 600), null, 0, false));
-        table1 = new JTable();
-        scrollPane1.setViewportView(table1);
+        tblDocuments = new JTable();
+        scrollPane1.setViewportView(tblDocuments);
         final JLabel label1 = new JLabel();
         label1.setText("Select a Document From the List Below:");
         panel1.add(label1, new GridConstraints(1, 0, 1, 3, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -668,10 +781,10 @@ public class DocumentSelector extends JFrame {
         srchOrganization = new JTextField();
         panel2.add(srchOrganization, new GridConstraints(5, 1, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         final JPanel panel3 = new JPanel();
-        panel3.setLayout(new GridLayoutManager(1, 5, new Insets(5, 5, 5, 5), -1, -1));
-        tabbedPane1.addTab("Google Search/Load URL", panel3);
+        panel3.setLayout(new GridLayoutManager(1, 4, new Insets(5, 5, 5, 5), -1, -1));
+        tabbedPane1.addTab("Load URL", panel3);
         final JLabel label8 = new JLabel();
-        label8.setText("Search Term/URL:");
+        label8.setText("URL:");
         panel3.add(label8, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         textField1 = new JTextField();
         textField1.setText("");
@@ -682,47 +795,68 @@ public class DocumentSelector extends JFrame {
         crawlURLButton = new JButton();
         crawlURLButton.setText("Crawl URL");
         panel3.add(crawlURLButton, new GridConstraints(0, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JPanel panel4 = new JPanel();
+        panel4.setLayout(new GridLayoutManager(2, 3, new Insets(0, 0, 0, 0), -1, -1));
+        tabbedPane1.addTab("Google Crawler", panel4);
+        txtGoogleSearchTerm = new JTextField();
+        panel4.add(txtGoogleSearchTerm, new GridConstraints(0, 1, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        final JLabel label9 = new JLabel();
+        label9.setText("Enter Search Term:");
+        panel4.add(label9, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JPanel panel5 = new JPanel();
+        panel5.setLayout(new GridLayoutManager(2, 3, new Insets(0, 0, 0, 0), -1, -1));
+        panel4.add(panel5, new GridConstraints(1, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        loadGoogleCrawlScheduleButton = new JButton();
+        loadGoogleCrawlScheduleButton.setText("Load Google Crawl Schedule");
+        panel5.add(loadGoogleCrawlScheduleButton, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         crawlGoogleButton = new JButton();
         crawlGoogleButton.setText("Crawl Google");
-        panel3.add(crawlGoogleButton, new GridConstraints(0, 4, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JPanel panel4 = new JPanel();
-        panel4.setLayout(new GridLayoutManager(4, 3, new Insets(5, 5, 5, 5), -1, -1));
-        tabbedPane1.addTab("Change Attributes", panel4);
-        final JLabel label9 = new JLabel();
-        label9.setText("Category");
-        panel4.add(label9, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel5.add(crawlGoogleButton, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JScrollPane scrollPane2 = new JScrollPane();
+        panel5.add(scrollPane2, new GridConstraints(0, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(1200, 200), new Dimension(1200, 200), null, 0, false));
+        tblCrawlSchedule = new JTable();
+        scrollPane2.setViewportView(tblCrawlSchedule);
+        clearCrawlScheduleButton = new JButton();
+        clearCrawlScheduleButton.setText("Clear Crawl Schedule");
+        panel5.add(clearCrawlScheduleButton, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JPanel panel6 = new JPanel();
+        panel6.setLayout(new GridLayoutManager(4, 3, new Insets(5, 5, 5, 5), -1, -1));
+        tabbedPane1.addTab("Change Attributes", panel6);
+        final JLabel label10 = new JLabel();
+        label10.setText("Category");
+        panel6.add(label10, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         ddlUpdateCategory = new JComboBox();
-        panel4.add(ddlUpdateCategory, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel6.add(ddlUpdateCategory, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         updateCategoryButton = new JButton();
         updateCategoryButton.setText("Update Category");
-        panel4.add(updateCategoryButton, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label10 = new JLabel();
-        label10.setText("Project");
-        panel4.add(label10, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel6.add(updateCategoryButton, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label11 = new JLabel();
+        label11.setText("Project");
+        panel6.add(label11, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         txtProject = new JTextField();
-        panel4.add(txtProject, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        panel6.add(txtProject, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         updateProjectButton = new JButton();
         updateProjectButton.setText("Update Project");
-        panel4.add(updateProjectButton, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label11 = new JLabel();
-        label11.setText("Use");
-        panel4.add(label11, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel6.add(updateProjectButton, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label12 = new JLabel();
+        label12.setText("Use");
+        panel6.add(label12, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         ddlUpdateUse = new JComboBox();
-        panel4.add(ddlUpdateUse, new GridConstraints(3, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel6.add(ddlUpdateUse, new GridConstraints(3, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         updateUseButton = new JButton();
         updateUseButton.setText("Update Use");
-        panel4.add(updateUseButton, new GridConstraints(3, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label12 = new JLabel();
-        label12.setText("Organization");
-        panel4.add(label12, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel6.add(updateUseButton, new GridConstraints(3, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label13 = new JLabel();
+        label13.setText("Organization");
+        panel6.add(label13, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         txtOrganization = new JTextField();
-        panel4.add(txtOrganization, new GridConstraints(2, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        panel6.add(txtOrganization, new GridConstraints(2, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         updateOrganizationButton = new JButton();
         updateOrganizationButton.setText("Update Organization");
-        panel4.add(updateOrganizationButton, new GridConstraints(2, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label13 = new JLabel();
-        label13.setText("Number Documents Displayed:");
-        panel1.add(label13, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel6.add(updateOrganizationButton, new GridConstraints(2, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label14 = new JLabel();
+        label14.setText("Number Documents Displayed:");
+        panel1.add(label14, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         lblNumDocs = new JLabel();
         lblNumDocs.setText("0");
         panel1.add(lblNumDocs, new GridConstraints(3, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -773,19 +907,36 @@ public class DocumentSelector extends JFrame {
         }
     }
 
+    private void updateGoogleCrawlSchedule(String searchTerm, String status) {
+        for (int r = 0; r < tblCrawlScheduleModel.getRowCount(); r++) {
+            String otherSearchTerm = tblCrawlScheduleModel.getValueAt(r, 0).toString();
+            if (searchTerm.equals(otherSearchTerm)) {
+                tblCrawlScheduleModel.setValueAt(status, r, 1);
+            }
+        }
+    }
+
     private class CrawlGoogleTask implements Runnable {
 
         private String searchTerm;
+        private Thread myThread;
+        private boolean active;
+        private String procId;
+        private ProcessMonitor procMon;
 
         public CrawlGoogleTask(String searchTerm) {
             this.searchTerm = searchTerm;
+            procMon = mainUI.getProcessMonitor();
         }
 
         @Override
         public void run() {
-            ProcessMonitor procMon = mainUI.getProcessMonitor();
+            //update crawl schedule
+            updateGoogleCrawlSchedule(searchTerm, "In Progress");
+            active = true;
+            //update process monitor
             procMon.setVisible(true);
-            String procId = procMon.addProcess("(" + Instant.now() + ") Crawling Google: " + searchTerm);
+            procId = procMon.addProcess("(" + Instant.now() + ") Crawling Google: " + searchTerm);
             try {
                 ParameterizedTypeReference<HashMap<String, Object>> responseType =
                         new ParameterizedTypeReference<HashMap<String, Object>>() {
@@ -802,16 +953,36 @@ public class DocumentSelector extends JFrame {
                 ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
             } catch (URISyntaxException e) {
                 JOptionPane.showMessageDialog(mainUI, e.getMessage());
+                updateGoogleCrawlSchedule(searchTerm, "Failed");
             } finally {
                 procMon.removeProcess(procId);
+                updateGoogleCrawlSchedule(searchTerm, "Done");
+                active = false;
             }
+        }
+
+        public void kill() {
+            myThread.interrupt();
+            procMon.removeProcess(procId);
+        }
+
+        public Thread getMyThread() {
+            return myThread;
+        }
+
+        public void setMyThread(Thread myThread) {
+            this.myThread = myThread;
+        }
+
+        public boolean isActive() {
+            return active;
         }
     }
 
     public void listSelectActionListener(ListSelectionEvent listSelectionEvent) {
         try {
-            if (listSelectionEvent.getValueIsAdjusting() && table1.getSelectedRow() != -1 && !clearingTableModel) {
-                String id = table1.getValueAt(table1.getSelectedRow(), 0).toString();
+            if (listSelectionEvent.getValueIsAdjusting() && tblDocuments.getSelectedRow() != -1 && !clearingTableModel) {
+                String id = tblDocuments.getValueAt(tblDocuments.getSelectedRow(), 0).toString();
 
                 ParameterizedTypeReference<HashMap<String, Object>> responseType =
                         new ParameterizedTypeReference<HashMap<String, Object>>() {
