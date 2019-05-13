@@ -6,7 +6,7 @@ public class CrawlGoogleManager {
     public static final Semaphore semaphore;
 
     static {
-        semaphore = new Semaphore(2);
+        semaphore = new Semaphore(16);
     }
 
     public Thread startProcess(final Runnable runCrawl) {

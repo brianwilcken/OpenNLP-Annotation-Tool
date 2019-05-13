@@ -153,6 +153,7 @@ public class DocumentSelector extends JFrame {
         tblCrawlScheduleModel = new DefaultTableModel();
         tblCrawlScheduleModel.addColumn("Search Term");
         tblCrawlScheduleModel.addColumn("Crawl Status");
+        tblCrawlScheduleModel.addColumn("");
 
         tblCrawlSchedule.setModel(tblCrawlScheduleModel);
 
@@ -322,7 +323,8 @@ public class DocumentSelector extends JFrame {
                 if (e.getKeyCode() == KeyEvent.VK_ENTER) {
                     String searchTerm = txtGoogleSearchTerm.getText();
                     txtGoogleSearchTerm.setText("");
-                    tblCrawlScheduleModel.addRow(new Object[]{searchTerm, "Pending"});
+                    tblCrawlScheduleModel.addRow(new Object[]{searchTerm, "Pending", "Search Google"});
+                    addSearchGoogleButton();
                 }
             }
 
@@ -346,12 +348,12 @@ public class DocumentSelector extends JFrame {
             }
         });
 
-        crawlGoogleButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent actionEvent) {
-                crawlGoogle();
-            }
-        });
+//        crawlGoogleButton.addActionListener(new ActionListener() {
+//            @Override
+//            public void actionPerformed(ActionEvent actionEvent) {
+//                crawlGoogle();
+//            }
+//        });
 
         updateProjectButton.addActionListener(new ActionListener() {
             @Override
@@ -415,13 +417,34 @@ public class DocumentSelector extends JFrame {
 
                 for (String term : terms) {
                     if (!term.startsWith("#")) {
-                        tblCrawlScheduleModel.addRow(new Object[]{term, "Pending"});
+                        tblCrawlScheduleModel.addRow(new Object[]{term, "Pending", "Search Google"});
                     }
                 }
+
+                addSearchGoogleButton();
             } catch (IOException e) {
                 JOptionPane.showMessageDialog(this, e.getMessage());
             }
         }
+    }
+
+    private void addSearchGoogleButton() {
+        Action searchGoogleAction = new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                searchGoogle(actionEvent);
+            }
+        };
+
+        ButtonColumn crawlColumn = new ButtonColumn(tblCrawlSchedule, searchGoogleAction, 2);
+    }
+
+    private void searchGoogle(ActionEvent e) {
+        int modelRow = Integer.valueOf(e.getActionCommand());
+        String searchTerm = tblCrawlScheduleModel.getValueAt(modelRow, 0).toString();
+        CrawlGoogleTask crawlGoogleTask = new CrawlGoogleTask(searchTerm);
+        crawlGoogleTask.setMyThread(mgr.startProcess(crawlGoogleTask));
+        crawlGoogleTasks.add(crawlGoogleTask);
     }
 
     private void clearGoogleCrawlScheduleTable() {
@@ -804,16 +827,13 @@ public class DocumentSelector extends JFrame {
         label9.setText("Enter Search Term:");
         panel4.add(label9, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JPanel panel5 = new JPanel();
-        panel5.setLayout(new GridLayoutManager(2, 3, new Insets(0, 0, 0, 0), -1, -1));
+        panel5.setLayout(new GridLayoutManager(2, 2, new Insets(0, 0, 0, 0), -1, -1));
         panel4.add(panel5, new GridConstraints(1, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         loadGoogleCrawlScheduleButton = new JButton();
         loadGoogleCrawlScheduleButton.setText("Load Google Crawl Schedule");
         panel5.add(loadGoogleCrawlScheduleButton, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        crawlGoogleButton = new JButton();
-        crawlGoogleButton.setText("Crawl Google");
-        panel5.add(crawlGoogleButton, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JScrollPane scrollPane2 = new JScrollPane();
-        panel5.add(scrollPane2, new GridConstraints(0, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(1200, 200), new Dimension(1200, 200), null, 0, false));
+        panel5.add(scrollPane2, new GridConstraints(0, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(1200, 200), new Dimension(1200, 200), null, 0, false));
         tblCrawlSchedule = new JTable();
         scrollPane2.setViewportView(tblCrawlSchedule);
         clearCrawlScheduleButton = new JButton();
