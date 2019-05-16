@@ -103,7 +103,7 @@ public class DocumentSelector extends JFrame {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         restTemplate = new RestTemplate(requestFactory);
         googleCrawlManager = new CrawlManager(16);
-        urlCrawlManager = new CrawlManager(64);
+        urlCrawlManager = new CrawlManager(4);
         crawlGoogleTasks = new ArrayList<>();
         crawlUrlTasks = new ArrayList<>();
         docSort = null;
