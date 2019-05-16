@@ -883,7 +883,7 @@ public class DocumentSelector extends JFrame {
                     JOptionPane.showMessageDialog(this, "Failed to update document! Reason: " + response.getStatusCode());
                 }
             }
-        } catch (URISyntaxException e) {
+        } catch (URISyntaxException | ResourceAccessException e) {
             JOptionPane.showMessageDialog(mainUI, e.getMessage());
         } catch (HttpClientErrorException | HttpServerErrorException e) {
             JOptionPane.showMessageDialog(mainUI, e.getResponseBodyAsString());
@@ -917,7 +917,7 @@ public class DocumentSelector extends JFrame {
             }
         } catch (HttpClientErrorException | HttpServerErrorException e) {
             JOptionPane.showMessageDialog(mainUI, e.getResponseBodyAsString());
-        } catch (URISyntaxException e) {
+        } catch (URISyntaxException | ResourceAccessException e) {
             JOptionPane.showMessageDialog(mainUI, e.getMessage());
         }
     }
@@ -1143,7 +1143,7 @@ public class DocumentSelector extends JFrame {
 
                 ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
                 updateCrawlSchedule(tblUrlCrawlScheduleModel, url, "Done");
-            } catch (URISyntaxException e) {
+            } catch (URISyntaxException | ResourceAccessException e) {
                 JOptionPane.showMessageDialog(mainUI, e.getMessage());
                 updateCrawlSchedule(tblUrlCrawlScheduleModel, url, "Failed");
             } finally {
@@ -1223,7 +1223,7 @@ public class DocumentSelector extends JFrame {
 
                 ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
                 updateCrawlSchedule(tblGoogleCrawlScheduleModel, searchTerm, "Done");
-            } catch (URISyntaxException e) {
+            } catch (URISyntaxException | ResourceAccessException e) {
                 JOptionPane.showMessageDialog(mainUI, e.getMessage());
                 updateCrawlSchedule(tblGoogleCrawlScheduleModel, searchTerm, "Failed");
             } finally {
@@ -1277,7 +1277,7 @@ public class DocumentSelector extends JFrame {
                     mainUI.refreshMetadataEditor();
                 }
             }
-        } catch (URISyntaxException e) {
+        } catch (URISyntaxException | ResourceAccessException e) {
             JOptionPane.showMessageDialog(mainUI, e.getMessage());
         }
     }

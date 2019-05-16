@@ -11,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import javax.swing.*;
@@ -236,7 +237,7 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
 
                 loadSearchTerms(categoryEntities);
             }
-        } catch (URISyntaxException e) {
+        } catch (URISyntaxException | ResourceAccessException e) {
             JOptionPane.showMessageDialog(main, e.getMessage());
         }
     }

@@ -131,7 +131,7 @@ public class DependencyResolver extends JFrame {
             assets = (Map<String, List<Map<String, Object>>>) jsonDict.get("data");
 
             populateAssetsDropDownList(ddlAssets, ddlAssetsModel, "BaseLink");
-        } catch (URISyntaxException e) {
+        } catch (URISyntaxException | ResourceAccessException e) {
             JOptionPane.showMessageDialog(mainUI, e.getMessage());
         }
     }
@@ -154,7 +154,7 @@ public class DependencyResolver extends JFrame {
 
             populateDependenciesDropDownList();
             ddlDependenciesSelectionChanged(null);
-        } catch (URISyntaxException e) {
+        } catch (URISyntaxException | ResourceAccessException e) {
             JOptionPane.showMessageDialog(mainUI, e.getMessage());
         }
     }
@@ -185,7 +185,7 @@ public class DependencyResolver extends JFrame {
                 } else {
                     JOptionPane.showMessageDialog(this, "Failure generating dependencies.");
                 }
-            } catch (URISyntaxException e) {
+            } catch (URISyntaxException | ResourceAccessException e) {
                 JOptionPane.showMessageDialog(mainUI, e.getMessage());
             } finally {
                 procMon.removeProcess(procId);
@@ -361,7 +361,7 @@ public class DependencyResolver extends JFrame {
             if (dependencyForRelation.size() > 0) {
                 selectedDependency = dependencyForRelation.get(0);
             }
-        } catch (URISyntaxException e) {
+        } catch (URISyntaxException | ResourceAccessException e) {
             JOptionPane.showMessageDialog(mainUI, e.getMessage());
         }
     }

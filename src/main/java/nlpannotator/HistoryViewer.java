@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import javax.swing.*;
@@ -101,7 +102,7 @@ public class HistoryViewer extends JFrame {
                 String lastUpdated = Tools.getFormattedDateTimeString(Instant.ofEpochMilli((long) historyEntry.get("created")));
                 tableModel.addRow(new Object[]{id, userId, lastUpdated});
             }
-        } catch (URISyntaxException e) {
+        } catch (URISyntaxException | ResourceAccessException e) {
             JOptionPane.showMessageDialog(mainUI, e.getMessage());
         }
     }
@@ -124,7 +125,7 @@ public class HistoryViewer extends JFrame {
             String annotated = history.get(0).get("annotated").toString();
 
             mainUI.updateAnnotation(annotated);
-        } catch (URISyntaxException e) {
+        } catch (URISyntaxException | ResourceAccessException e) {
             JOptionPane.showMessageDialog(mainUI, e.getMessage());
         }
     }

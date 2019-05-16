@@ -78,6 +78,7 @@ public class Main extends JFrame {
     private JButton testNERModelButton;
     private JButton trainW2VModelButton;
     private JButton viewNERCorpusButton;
+    private JLabel lblServerConnection;
 
     private RestTemplate restTemplate;
     private ProcessMonitor processMonitor;
@@ -137,8 +138,15 @@ public class Main extends JFrame {
         lowbar.setFloatable(false);
         botbar.setFloatable(false);
         resolverMgr = new DependencyResolverManager(this);
+        typeTree.setVisible(false);
         populateDocumentCategories();
-        populateAnnotationTypes();
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                populateAnnotationTypes();
+            }
+        }).start();
 
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         addEventListeners();
@@ -179,11 +187,24 @@ public class Main extends JFrame {
             populateTypeTreeNodes(types, top);
 
             typeModel = new DefaultTreeModel(top);
+            typeTree.setVisible(true);
             typeTree.setModel(typeModel);
             typeTree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
             typeTree.setRootVisible(false);
-        } catch (URISyntaxException e) {
+            updateServerConnectionLabel(true);
+        } catch (URISyntaxException | ResourceAccessException e) {
+            updateServerConnectionLabel(false);
             JOptionPane.showMessageDialog(this, e.getMessage());
+        }
+    }
+
+    private void updateServerConnectionLabel(boolean success) {
+        if (success) {
+            lblServerConnection.setText("Connected");
+            lblServerConnection.setForeground(Color.BLACK);
+        } else {
+            lblServerConnection.setText("NOT Connected!");
+            lblServerConnection.setForeground(Color.RED);
         }
     }
 
@@ -213,7 +234,7 @@ public class Main extends JFrame {
      */
     private void $$$setupUI$$$() {
         mainPanel = new JPanel();
-        mainPanel.setLayout(new GridLayoutManager(5, 2, new Insets(0, 0, 0, 0), -1, -1));
+        mainPanel.setLayout(new GridLayoutManager(5, 2, new Insets(5, 5, 5, 5), -1, -1));
         topbar = new JToolBar();
         mainPanel.add(topbar, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(-1, 20), null, 0, false));
         saveButton = new JButton();
@@ -346,6 +367,9 @@ public class Main extends JFrame {
         botbar.add(label3);
         host = new JTextField();
         botbar.add(host);
+        lblServerConnection = new JLabel();
+        lblServerConnection.setText("");
+        botbar.add(lblServerConnection);
     }
 
     /**
@@ -422,6 +446,25 @@ public class Main extends JFrame {
 
     private void addEventListeners() {
         playground.addKeyListener(new Main.PlaygroundKeyListener());
+
+        host.addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent keyEvent) {
+
+            }
+
+            @Override
+            public void keyPressed(KeyEvent keyEvent) {
+                if (keyEvent.getKeyCode() == KeyEvent.VK_ENTER) {
+                    populateAnnotationTypes();
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent keyEvent) {
+
+            }
+        });
 
         saveButton.addActionListener(new ActionListener() {
             @Override
