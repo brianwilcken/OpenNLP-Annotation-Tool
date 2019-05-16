@@ -2,11 +2,11 @@ package common;
 
 import java.util.concurrent.Semaphore;
 
-public class CrawlGoogleManager {
-    public static final Semaphore semaphore;
+public class CrawlManager {
+    private final Semaphore semaphore;
 
-    static {
-        semaphore = new Semaphore(16);
+    public CrawlManager(int numThreads) {
+        semaphore = new Semaphore(numThreads);
     }
 
     public Thread startProcess(final Runnable runCrawl) {
