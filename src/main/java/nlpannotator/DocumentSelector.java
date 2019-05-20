@@ -662,6 +662,7 @@ public class DocumentSelector extends JFrame {
             try {
                 for (int i = 0; i < files.length; i++) {
                     Map<String, String> metadata = new HashMap<>();
+                    metadata.put("contributor", System.getProperty("user.name").toLowerCase());
                     MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
                     body.add("metadata", metadata);
                     body.add("file", new FileSystemResource(files[i]));
@@ -711,6 +712,7 @@ public class DocumentSelector extends JFrame {
 
                 MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
                 body.add("url", url.toString());
+                body.add("contributor", System.getProperty("user.name").toLowerCase());
 
                 RequestEntity<MultiValueMap<String, Object>> request = RequestEntity.post(new URI(mainUI.getHostURL() + "/documents/url"))
                         .accept(MediaType.APPLICATION_JSON)
@@ -1133,6 +1135,7 @@ public class DocumentSelector extends JFrame {
                         };
 
                 MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+                body.add("contributor", System.getProperty("user.name").toLowerCase());
                 body.add("url", url);
                 body.add("depth", depth);
 
@@ -1214,6 +1217,7 @@ public class DocumentSelector extends JFrame {
                         };
 
                 MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+                body.add("contributor", System.getProperty("user.name").toLowerCase());
                 body.add("searchTerm", searchTerm);
 
                 RequestEntity<MultiValueMap<String, Object>> request = RequestEntity.post(new URI(mainUI.getHostURL() + "/documents/crawlGoogle"))
