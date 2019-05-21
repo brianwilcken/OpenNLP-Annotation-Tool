@@ -136,7 +136,9 @@ public class MetadataEditor extends JFrame {
 
     private void populateFormFields(Map<Object, Object> cpDoc) {
         IDTextField.setText(cpDoc.get("id").toString());
-        documentStoreIDTextField.setText(cpDoc.get("docStoreId").toString());
+        if (cpDoc.containsKey("docStoreId")) {
+            documentStoreIDTextField.setText(cpDoc.get("docStoreId").toString());
+        }
         filenameTextField.setText(cpDoc.get("filename").toString());
         if (cpDoc.containsKey("url")) {
             URLTextField.setText(cpDoc.get("url").toString());
