@@ -89,6 +89,7 @@ public class Main extends JFrame {
     private AnnotatedLinesTracker annotatedLinesTracker;
     private FindAndReplace findAndReplace;
     private DependencyResolverManager resolverMgr;
+    private TrainingIterations trainingIterations;
 
     private SizedStack<String> undoStates;
     private SizedStack<String> redoStates;
@@ -1040,6 +1041,10 @@ public class Main extends JFrame {
     }
 
     private void trainDoccatModelActionPerformed(ActionEvent evt) {
+        showTrainingIterations();
+    }
+
+    public void trainDoccatModel(int iterations) {
         ProcessMonitor procMon = getProcessMonitor();
         procMon.setVisible(true);
         String procId = procMon.addProcess("(" + Instant.now() + ") Training Doccat Model");
@@ -1049,7 +1054,7 @@ public class Main extends JFrame {
                         new ParameterizedTypeReference<HashMap<String, Object>>() {
                         };
 
-                RequestEntity<Void> request = RequestEntity.get(new URI(getHostURL() + "/documents/trainDoccat?doAsync=false"))
+                RequestEntity<Void> request = RequestEntity.get(new URI(getHostURL() + "/documents/trainDoccat?doAsync=false&iterations=" + iterations))
                         .accept(MediaType.APPLICATION_JSON).build();
 
 
@@ -1080,7 +1085,6 @@ public class Main extends JFrame {
                 procMon.removeProcess(procId);
             }
         }).start();
-
     }
 
     public void autoAnnotateDocument(double threshold, Map<String, String> modelVersion) {
@@ -1146,6 +1150,13 @@ public class Main extends JFrame {
             metadataEditor = new MetadataEditor(this);
         }
         return metadataEditor;
+    }
+
+    private void showTrainingIterations() {
+        if (trainingIterations == null) {
+            trainingIterations = new TrainingIterations(this);
+        }
+        trainingIterations.setVisible(true);
     }
 
     public void showMetadataEditor() {
