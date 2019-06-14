@@ -12,6 +12,7 @@ public class TrainingIterations extends JFrame {
     private JSpinner iterationsSpinner;
     private JButton startButton;
     private JPanel mainPanel;
+    private JSlider percentEntropySlider;
     private Main main;
 
     public TrainingIterations(Main main) {
@@ -38,7 +39,8 @@ public class TrainingIterations extends JFrame {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
                 int iterations = Integer.parseInt(iterationsSpinner.getValue().toString());
-                main.trainDoccatModel(iterations);
+                double percentEntropy = (double) percentEntropySlider.getValue() / (double)100;
+                main.trainDoccatModel(iterations, percentEntropy);
                 setVisible(false);
             }
         });
