@@ -1044,7 +1044,7 @@ public class Main extends JFrame {
         showTrainingIterations();
     }
 
-    public void trainDoccatModel(int iterations, double percentEntropy) {
+    public void trainDoccatModel(int iterations) {
         ProcessMonitor procMon = getProcessMonitor();
         procMon.setVisible(true);
         String procId = procMon.addProcess("(" + Instant.now() + ") Training Doccat Model");
@@ -1054,7 +1054,7 @@ public class Main extends JFrame {
                         new ParameterizedTypeReference<HashMap<String, Object>>() {
                         };
 
-                RequestEntity<Void> request = RequestEntity.get(new URI(getHostURL() + "/documents/trainDoccat?doAsync=false&iterations=" + iterations + "&percentEntropy=" + percentEntropy))
+                RequestEntity<Void> request = RequestEntity.get(new URI(getHostURL() + "/documents/trainDoccat?doAsync=false&iterations=" + iterations))
                         .accept(MediaType.APPLICATION_JSON).build();
 
 
