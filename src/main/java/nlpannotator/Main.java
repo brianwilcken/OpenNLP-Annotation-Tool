@@ -79,6 +79,7 @@ public class Main extends JFrame {
     private JButton trainW2VModelButton;
     private JButton viewNERCorpusButton;
     private JLabel lblServerConnection;
+    private JButton topicsBrowserButton;
 
     private RestTemplate restTemplate;
     private ProcessMonitor processMonitor;
@@ -87,6 +88,7 @@ public class Main extends JFrame {
     private MetadataEditor metadataEditor;
     private AutoDetectionThreshold autoDetectionThreshold;
     private AnnotatedLinesTracker annotatedLinesTracker;
+    private TopicsBrowser topicsBrowser;
     private FindAndReplace findAndReplace;
     private DependencyResolverManager resolverMgr;
     private TrainingIterations trainingIterations;
@@ -361,6 +363,12 @@ public class Main extends JFrame {
         annotationsTrackerButton = new JButton();
         annotationsTrackerButton.setText("Annotations Tracker");
         lowbar.add(annotationsTrackerButton);
+        final JToolBar.Separator toolBar$Separator12 = new JToolBar.Separator();
+        lowbar.add(toolBar$Separator12);
+        topicsBrowserButton = new JButton();
+        topicsBrowserButton.setHideActionText(false);
+        topicsBrowserButton.setText("Topics Browser");
+        lowbar.add(topicsBrowserButton);
         botbar = new JToolBar();
         mainPanel.add(botbar, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(-1, 20), null, 0, false));
         final JLabel label3 = new JLabel();
@@ -637,6 +645,13 @@ public class Main extends JFrame {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
                 updateAnnotatedLinesList();
+            }
+        });
+
+        topicsBrowserButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                updateTopicsBrowser();
             }
         });
 
@@ -1172,6 +1187,12 @@ public class Main extends JFrame {
         }
     }
 
+    public void refreshTopicsBrowser() {
+        if (getTopicsBrowser().isVisible()) {
+            getTopicsBrowser().populate(document);
+        }
+    }
+
     public void updateAnnotation(String annotated) {
         int caretPos = playground.getCaretPosition();
         document.replace("annotated", annotated);
@@ -1484,6 +1505,11 @@ public class Main extends JFrame {
                 } else {
                     document.put("category", categories);
                 }
+                if (document.containsKey("userCategory")) {
+                    document.replace("userCategory", categories);
+                } else {
+                    document.put("userCategory", categories);
+                }
 
                 String annotatedBy = System.getProperty("user.name");
                 if (document.containsKey("annotatedBy")) {
@@ -1666,6 +1692,20 @@ public class Main extends JFrame {
         return annotatedLinesTracker;
     }
 
+    private void updateTopicsBrowser() {
+        TopicsBrowser topicsBrowser = getTopicsBrowser();
+        topicsBrowser.populate(document);
+
+        topicsBrowser.setVisible(true);
+    }
+
+    private TopicsBrowser getTopicsBrowser() {
+        if (topicsBrowser == null) {
+            topicsBrowser = new TopicsBrowser(this);
+        }
+        return topicsBrowser;
+    }
+
     private class DependencyResolverManager {
         private DependencyResolver resolver;
         private Point location;
@@ -1754,6 +1794,18 @@ public class Main extends JFrame {
         } catch (BadLocationException e) {
             e.printStackTrace();
         }
+    }
+
+    public void navigateToLine(int start, int end) {
+        RXTextUtilities.gotoStartOfLine(playground, start);
+        int charStart = playground.getCaretPosition();
+        RXTextUtilities.gotoStartOfLine(playground, end + 1);
+        int charEnd = playground.getCaretPosition();
+        RXTextUtilities.gotoStartOfLine(playground, start);
+        RXTextUtilities.centerLineInScrollPane(playground);
+
+        playground.grabFocus();
+        playground.select(charStart, charEnd);
     }
 
     public void deleteAnnotation(String annotation, String type) {

@@ -1322,6 +1322,7 @@ public class DocumentSelector extends JFrame {
                     mainUI.loadDocument(document.get(0));
                     mainUI.reloadHistory();
                     mainUI.refreshMetadataEditor();
+                    mainUI.refreshTopicsBrowser();
                 }
             }
         } catch (URISyntaxException | ResourceAccessException e) {

@@ -314,6 +314,17 @@
               <text value="Annotations Tracker"/>
             </properties>
           </component>
+          <component id="8160b" class="javax.swing.JToolBar$Separator">
+            <constraints/>
+            <properties/>
+          </component>
+          <component id="8ef9" class="javax.swing.JButton" binding="topicsBrowserButton">
+            <constraints/>
+            <properties>
+              <hideActionText value="false"/>
+              <text value="Topics Browser"/>
+            </properties>
+          </component>
         </children>
       </toolbar>
       <toolbar id="63c96" binding="botbar">
