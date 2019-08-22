@@ -1,5 +1,6 @@
 package nlpannotator;
 
+import com.google.common.base.Strings;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import common.FacilityTypes;
@@ -213,10 +214,12 @@ public class AutoDetectionThreshold extends JFrame {
     }
 
     private void showModelDetails(ActionEvent e) {
-        int modelRow = Integer.valueOf(e.getActionCommand());
-        String modelVersion = tblModelList.getValueAt(modelRow, 0).toString();
+        Map<String, String> modelVersion = getModelVersion();
+        String category = modelVersion.keySet().toArray()[0].toString();
+        String version = modelVersion.get(category);
+
         for (Map<String, Object> model : modelListing) {
-            if (model.get("modelVersion").toString().equals(modelVersion)) {
+            if (model.get("modelVersion").toString().equals(version)) {
                 String testReport = model.get("testReport").toString();
                 JTextArea resultText = new JTextArea(testReport);
                 JScrollPane scrollPane = new JScrollPane();
@@ -225,7 +228,7 @@ public class AutoDetectionThreshold extends JFrame {
                 resultText.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
 
                 JOptionPane pane = new JOptionPane(scrollPane, JOptionPane.INFORMATION_MESSAGE, JOptionPane.DEFAULT_OPTION);
-                JDialog dialog = pane.createDialog(this, "Test Report for Version " + modelVersion);
+                JDialog dialog = pane.createDialog(this, "Test Report for Version " + version);
                 dialog.setModal(false);
                 dialog.setVisible(true);
 
@@ -255,14 +258,27 @@ public class AutoDetectionThreshold extends JFrame {
                 JOptionPane.showMessageDialog(this, "Server error has occurred!!");
             } else {
                 Map<String, Object> data = ((Map<String, Object>) jsonDict.get("data"));
-                String attrData = data.get(attribute).toString();
+
+                List<String> facilityTypes = FacilityTypes.dictionary.get(category);
+                StringBuilder attrBldr = new StringBuilder();
+                for (String facilityType : facilityTypes) {
+                    Map<String, String> attrMap = (Map<String, String>) data.get(facilityType);
+                    String attrData = attrMap.get(attribute).toString();
+                    if (!Strings.isNullOrEmpty(attrData)) {
+                        attrBldr.append(System.lineSeparator());
+                        attrBldr.append("**********" + title + " for " + facilityType + "**********");
+                        attrBldr.append(System.lineSeparator());
+                        attrBldr.append(System.lineSeparator());
+                        attrBldr.append(attrData);
+                    }
+                }
                 List categories = new ArrayList();
                 categories.add(category);
 
                 Map document = new HashMap();
                 document.put("category", categories);
                 document.put("filename", category + " Model Version " + version + " " + title);
-                document.put("annotated", attrData);
+                document.put("annotated", attrBldr.toString());
 
                 mainUI.loadDocument(document);
             }

@@ -41,9 +41,10 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
     private JButton replaceAllButton;
     private JButton removeButton;
     private JScrollPane spFound;
-    private JButton loadDictionaryButton;
+    private JButton entityScanButton;
     private JButton nextButton;
     private JButton previousButton;
+    private JButton loadDictionaryButton;
     private Main main;
 
     private RestTemplate restTemplate;
@@ -123,6 +124,13 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
             }
         });
 
+        entityScanButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                entityScanActionPerformed(actionEvent);
+            }
+        });
+
         lsFound.setModel(found);
         lsFound.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         lsFound.setLayoutOrientation(JList.VERTICAL);
@@ -185,7 +193,7 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
         found.clear();
     }
 
-    private void loadDictionaryActionPerformed(ActionEvent evt) {
+    private void entityScanActionPerformed(ActionEvent evt) {
         try {
             String id = main.document.get("id").toString();
 
@@ -240,6 +248,17 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
         } catch (URISyntaxException | ResourceAccessException e) {
             JOptionPane.showMessageDialog(main, e.getMessage());
         }
+    }
+
+    private void loadDictionaryActionPerformed(ActionEvent evt) {
+        List<String> dictTerms = new ArrayList<>();
+        List categories = main.getDocumentCategories();
+        for (Object category : categories) {
+            String wordsText = Tools.getResource("dictionary/" + category + ".txt");
+            List<String> wordsList = Arrays.asList(wordsText.split("\\r\\n")).stream().collect(Collectors.toList());
+            dictTerms.addAll(wordsList);
+        }
+        loadSearchTerms(dictTerms);
     }
 
     public void loadSearchTerms(List<String> wordsList) {
@@ -328,7 +347,7 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
         findButton.setText("Find");
         panel1.add(findButton, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JPanel panel2 = new JPanel();
-        panel2.setLayout(new GridLayoutManager(5, 2, new Insets(0, 0, 0, 0), -1, -1));
+        panel2.setLayout(new GridLayoutManager(6, 2, new Insets(0, 0, 0, 0), -1, -1));
         jPanelFindAndReplace.add(panel2, new GridConstraints(1, 1, 9, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         spFound = new JScrollPane();
         panel2.add(spFound, new GridConstraints(0, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(200, 100), null, 0, false));
@@ -340,18 +359,21 @@ public class FindAndReplace extends JFrame implements ListSelectionListener {
         resetButton = new JButton();
         resetButton.setText("Reset");
         panel2.add(resetButton, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        entityScanButton = new JButton();
+        entityScanButton.setText("Entity Scan");
+        panel2.add(entityScanButton, new GridConstraints(3, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label2 = new JLabel();
+        label2.setText("Navigation Controls:");
+        panel2.add(label2, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        previousButton = new JButton();
+        previousButton.setText("<< Previous");
+        panel2.add(previousButton, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        nextButton = new JButton();
+        nextButton.setText("Next >>");
+        panel2.add(nextButton, new GridConstraints(5, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         loadDictionaryButton = new JButton();
         loadDictionaryButton.setText("Load Dictionary");
         panel2.add(loadDictionaryButton, new GridConstraints(2, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label2 = new JLabel();
-        label2.setText("Navigation Controls:");
-        panel2.add(label2, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        previousButton = new JButton();
-        previousButton.setText("<< Previous");
-        panel2.add(previousButton, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        nextButton = new JButton();
-        nextButton.setText("Next >>");
-        panel2.add(nextButton, new GridConstraints(4, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label3 = new JLabel();
         label3.setText("Find:");
         jPanelFindAndReplace.add(label3, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));

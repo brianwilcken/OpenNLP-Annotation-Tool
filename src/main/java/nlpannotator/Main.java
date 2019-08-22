@@ -80,6 +80,7 @@ public class Main extends JFrame {
     private JButton viewNERCorpusButton;
     private JLabel lblServerConnection;
     private JButton topicsBrowserButton;
+    private JButton testDocCatModelButton;
 
     private RestTemplate restTemplate;
     private ProcessMonitor processMonitor;
@@ -337,6 +338,9 @@ public class Main extends JFrame {
         trainDocCatModelButton = new JButton();
         trainDocCatModelButton.setText("Train DocCat Model");
         midbar.add(trainDocCatModelButton);
+        testDocCatModelButton = new JButton();
+        testDocCatModelButton.setText("Test DocCat Model");
+        midbar.add(testDocCatModelButton);
         final JToolBar.Separator toolBar$Separator9 = new JToolBar.Separator();
         midbar.add(toolBar$Separator9);
         dependencyResolverButton = new JButton();
@@ -591,6 +595,13 @@ public class Main extends JFrame {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
                 trainDoccatModelActionPerformed(null);
+            }
+        });
+
+        testDocCatModelButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                testDoccatModelActionPerformed(null);
             }
         });
 
@@ -1059,34 +1070,23 @@ public class Main extends JFrame {
         showTrainingIterations();
     }
 
-    public void trainDoccatModel(int iterations) {
+    private void testDoccatModelActionPerformed(ActionEvent evt) {
         ProcessMonitor procMon = getProcessMonitor();
         procMon.setVisible(true);
-        String procId = procMon.addProcess("(" + Instant.now() + ") Training Doccat Model");
+        String procId = procMon.addProcess("(" + Instant.now() + ") Testing Doccat Model");
         new Thread(() -> {
             try {
                 ParameterizedTypeReference<HashMap<String, Object>> responseType =
                         new ParameterizedTypeReference<HashMap<String, Object>>() {
                         };
 
-                RequestEntity<Void> request = RequestEntity.get(new URI(getHostURL() + "/documents/trainDoccat?doAsync=false&iterations=" + iterations))
+                RequestEntity<Void> request = RequestEntity.get(new URI(getHostURL() + "/documents/testDoccat"))
                         .accept(MediaType.APPLICATION_JSON).build();
-
 
                 ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
 
                 if (response.getStatusCode() == HttpStatus.OK) {
-                    String report = response.getBody().get("data").toString();
-                    JTextArea resultText = new JTextArea(report);
-                    JScrollPane scrollPane = new JScrollPane();
-                    scrollPane.setViewportView(resultText);
-                    scrollPane.setPreferredSize(new Dimension(2200, 1080));
-                    resultText.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-
-                    JOptionPane pane = new JOptionPane(scrollPane, JOptionPane.INFORMATION_MESSAGE, JOptionPane.DEFAULT_OPTION);
-                    JDialog dialog = pane.createDialog(this, "Doccat Model Test Report");
-                    dialog.setModal(false);
-                    dialog.setVisible(true);
+                    displayDocCatModelTestResults(response);
                 } else {
                     JOptionPane.showMessageDialog(this, "Server error has occurred!!");
                 }
@@ -1100,6 +1100,52 @@ public class Main extends JFrame {
                 procMon.removeProcess(procId);
             }
         }).start();
+    }
+
+    public void trainDoccatModel(int iterations) {
+        ProcessMonitor procMon = getProcessMonitor();
+        procMon.setVisible(true);
+        String procId = procMon.addProcess("(" + Instant.now() + ") Training Doccat Model");
+        new Thread(() -> {
+            try {
+                ParameterizedTypeReference<HashMap<String, Object>> responseType =
+                        new ParameterizedTypeReference<HashMap<String, Object>>() {
+                        };
+
+                RequestEntity<Void> request = RequestEntity.get(new URI(getHostURL() + "/documents/trainDoccat?doAsync=false&iterations=" + iterations))
+                        .accept(MediaType.APPLICATION_JSON).build();
+
+                ResponseEntity<HashMap<String, Object>> response = restTemplate.exchange(request, responseType);
+
+                if (response.getStatusCode() == HttpStatus.OK) {
+                    displayDocCatModelTestResults(response);
+                } else {
+                    JOptionPane.showMessageDialog(this, "Server error has occurred!!");
+                }
+            } catch (URISyntaxException e) {
+                JOptionPane.showMessageDialog(this, e.getMessage());
+            } catch (ResourceAccessException e) {
+                JOptionPane.showMessageDialog(this, e.getMessage());
+            } catch (HttpServerErrorException e) {
+                JOptionPane.showMessageDialog(this, e.getResponseBodyAsString());
+            } finally {
+                procMon.removeProcess(procId);
+            }
+        }).start();
+    }
+
+    private void displayDocCatModelTestResults(ResponseEntity<HashMap<String, Object>> response) {
+        String report = response.getBody().get("data").toString();
+        JTextArea resultText = new JTextArea(report);
+        JScrollPane scrollPane = new JScrollPane();
+        scrollPane.setViewportView(resultText);
+        scrollPane.setPreferredSize(new Dimension(2200, 1080));
+        resultText.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+
+        JOptionPane pane = new JOptionPane(scrollPane, JOptionPane.INFORMATION_MESSAGE, JOptionPane.DEFAULT_OPTION);
+        JDialog dialog = pane.createDialog(this, "Doccat Model Test Report");
+        dialog.setModal(false);
+        dialog.setVisible(true);
     }
 
     public void autoAnnotateDocument(double threshold, Map<String, String> modelVersion) {

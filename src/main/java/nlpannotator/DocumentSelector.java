@@ -869,6 +869,7 @@ public class DocumentSelector extends JFrame {
             List categories = new ArrayList();
             categories.add(ddlUpdateCategory.getSelectedItem());
             updateAttribute("category", categories);
+            updateAttribute("userCategory", categories);
             filter();
         } else {
             JOptionPane.showMessageDialog(this, "Select a document...");

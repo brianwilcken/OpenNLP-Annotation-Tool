@@ -70,7 +70,7 @@
           </component>
         </children>
       </grid>
-      <grid id="e2af4" layout-manager="GridLayoutManager" row-count="5" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+      <grid id="e2af4" layout-manager="GridLayoutManager" row-count="6" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
         <margin top="0" left="0" bottom="0" right="0"/>
         <constraints>
           <grid row="1" column="1" row-span="9" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
@@ -109,17 +109,17 @@
               <text value="Reset"/>
             </properties>
           </component>
-          <component id="76075" class="javax.swing.JButton" binding="loadDictionaryButton" default-binding="true">
+          <component id="76075" class="javax.swing.JButton" binding="entityScanButton">
             <constraints>
-              <grid row="2" column="0" row-span="1" col-span="2" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+              <grid row="3" column="0" row-span="1" col-span="2" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
             </constraints>
             <properties>
-              <text value="Load Dictionary"/>
+              <text value="Entity Scan"/>
             </properties>
           </component>
           <component id="d65f4" class="javax.swing.JLabel">
             <constraints>
-              <grid row="3" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+              <grid row="4" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
             </constraints>
             <properties>
               <text value="Navigation Controls:"/>
@@ -127,7 +127,7 @@
           </component>
           <component id="d9db" class="javax.swing.JButton" binding="previousButton" default-binding="true">
             <constraints>
-              <grid row="4" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+              <grid row="5" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
             </constraints>
             <properties>
               <text value="&lt;&lt; Previous"/>
@@ -135,10 +135,18 @@
           </component>
           <component id="6344e" class="javax.swing.JButton" binding="nextButton" default-binding="true">
             <constraints>
-              <grid row="4" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+              <grid row="5" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
             </constraints>
             <properties>
               <text value="Next &gt;&gt;"/>
+            </properties>
+          </component>
+          <component id="40ef" class="javax.swing.JButton" binding="loadDictionaryButton">
+            <constraints>
+              <grid row="2" column="0" row-span="1" col-span="2" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="Load Dictionary"/>
             </properties>
           </component>
         </children>
