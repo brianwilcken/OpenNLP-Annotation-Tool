@@ -183,7 +183,7 @@ public class AutoDetectionThreshold extends JFrame {
             String numModelSentences = model.get("numModelSentences") != null ? model.get("numModelSentences").toString() : "N/A";
             String numTestSentences = model.get("numSentences") != null ? model.get("numSentences").toString() : "N/A";
             String numTestTags = model.get("tagCount") != null ? model.get("tagCount").toString() : "N/A";
-            String entityAccuracy = model.get("entityAccuracy") != null ? model.get("entityAccuracy").toString() : "N/A";
+            String entityAccuracy = model.get("entityAccuracy") != null ? String.format("%4.2f", Double.parseDouble(model.get("entityAccuracy").toString())) + "%" : "N/A";
             String entityFMeasure = model.get("entityFMeasure") != null ? model.get("entityFMeasure").toString() : "N/A";
 
             tblModelListModel.addRow(new Object[]{modelVersion, modelDate, numModelSentences, numTestSentences, numTestTags, entityAccuracy, entityFMeasure, "See Detailed Test Report", "Review Predictions", "Review Testing Corpus"});
